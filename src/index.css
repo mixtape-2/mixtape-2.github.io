@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  /* Single Dark Theme — Obsidian, Layered Greys & Burnt Vermilion */
+  --theme-primary: #ea4c23;
+  --theme-rgb: 234, 76, 35;
+  --theme-secondary: #d13d19;
+  --theme-accent: #ea4c23;
+  --theme-accent-hover: #f25e38;
+  --theme-gradient: linear-gradient(135deg, #ea4c23 0%, #c83b18 100%);
+  --theme-badge-bg: rgba(234, 76, 35, 0.13);
+  --theme-badge-text: #f0633e;
+  --theme-badge-border: rgba(234, 76, 35, 0.30);
+  --theme-glow: rgba(234, 76, 35, 0.22);
+
+  /* Surfaces */
+  --bg-canvas: #0b0b0d;
+  --bg-sidebar: #101013;
+  --bg-surface: #151519;
+  --bg-surface-hover: #1c1c21;
+  --bg-elevated: #18181d;
+
+  /* Hairline Borders */
+  --border-subtle: rgba(255, 255, 255, 0.065);
+  --border-strong: rgba(255, 255, 255, 0.13);
+
+  /* Layered Grey Typography */
+  --text-primary: #e5e5ea;
+  --text-secondary: #9898a3;
+  --text-muted: #63636e;
+}
+
+/* Text size accessibility scaling */
+html[data-text-size="small"] {
+  font-size: 14px;
+}
+html[data-text-size="medium"] {
+  font-size: 15.5px;
+}
+html[data-text-size="large"] {
+  font-size: 17px;
+}
+html[data-text-size="xlarge"] {
+  font-size: 18.5px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.font-mono-tech {
+  font-family: 'Share Tech Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Safe area helpers for iOS / Android PWA */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Minimal scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(152, 152, 163, 0.22);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(152, 152, 163, 0.4);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Crisp minimalist range slider */
+input[type="range"].studio-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"].studio-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+input[type="range"].studio-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 9999px;
+  background: var(--theme-accent);
+  margin-top: -4px;
+}
