@@ -46,6 +46,7 @@ interface TrackRowProps {
   onToggleSelect?: () => void;
   showBpm?: boolean;
   compact?: boolean;
+  hideThumbnail?: boolean;
 }
 
 export const TrackRow: React.FC<TrackRowProps> = ({
@@ -64,6 +65,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
   onToggleSelect,
   showBpm,
   compact = false,
+  hideThumbnail = false,
 }) => {
   const { currentTrack, isPlaying, playTrack, togglePlay, addToQueue, playNext } = usePlayer();
   const { isLiked, toggleLike } = useLibrary();
@@ -112,7 +114,11 @@ export const TrackRow: React.FC<TrackRowProps> = ({
           {selected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
         </div>
       ) : index !== undefined ? (
-        <div className="w-6 text-center text-xs font-mono-tech text-[var(--text-muted)] shrink-0 hidden sm:flex items-center justify-center">
+        <div
+          className={`w-6 text-center text-xs font-mono-tech text-[var(--text-muted)] shrink-0 items-center justify-center ${
+            hideThumbnail ? 'flex' : 'hidden sm:flex'
+          }`}
+        >
           {isCurrent && isPlaying ? (
             <span className="w-2 h-2 rounded-full bg-[var(--theme-accent)]" />
           ) : (
@@ -124,36 +130,38 @@ export const TrackRow: React.FC<TrackRowProps> = ({
         </div>
       ) : null}
 
-      {/* Artwork */}
-      <div
-        className={`relative shrink-0 rounded-lg overflow-hidden bg-black/30 ${
-          compact ? 'w-9 h-9' : 'w-11 h-11'
-        }`}
-      >
-        {track.thumbnail ? (
-          <img
-            src={track.thumbnail}
-            alt={track.title}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-            <Music className="w-4 h-4" />
-          </div>
-        )}
+      {/* Artwork (hidden for album tracklists) */}
+      {!hideThumbnail && (
         <div
-          className={`absolute inset-0 bg-black/45 flex items-center justify-center transition-opacity ${
-            isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          className={`relative shrink-0 rounded-lg overflow-hidden bg-black/30 ${
+            compact ? 'w-9 h-9' : 'w-11 h-11'
           }`}
         >
-          {isCurrent && isPlaying ? (
-            <Pause className="w-4 h-4 text-white fill-white" />
+          {track.thumbnail ? (
+            <img
+              src={track.thumbnail}
+              alt={track.title}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+            <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+              <Music className="w-4 h-4" />
+            </div>
           )}
+          <div
+            className={`absolute inset-0 bg-black/45 flex items-center justify-center transition-opacity ${
+              isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            }`}
+          >
+            {isCurrent && isPlaying ? (
+              <Pause className="w-4 h-4 text-white fill-white" />
+            ) : (
+              <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Title & Artist */}
       <div className="flex-1 min-w-0">

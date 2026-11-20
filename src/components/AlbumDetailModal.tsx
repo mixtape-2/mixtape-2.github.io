@@ -178,6 +178,7 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
                   track={track}
                   index={idx}
                   queue={tracks}
+                  hideThumbnail
                   onPlay={() => playTrack(track, tracks, false, 'vinyl', release.title)}
                   onAddToPlaylist={onAddTrackToPlaylist}
                 />

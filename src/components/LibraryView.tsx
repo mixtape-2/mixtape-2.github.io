@@ -309,6 +309,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   index={idx}
                   queue={filteredTracks}
                   showBpm
+                  hideThumbnail={activePlaylist?.mediaType === 'vinyl'}
                   onPlay={() =>
                     showingFavoritesDetail
                       ? playTrack(track, filteredTracks)
