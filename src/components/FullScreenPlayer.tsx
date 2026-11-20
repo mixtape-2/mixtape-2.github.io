@@ -150,17 +150,41 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center px-6 sm:px-10 max-w-2xl w-full mx-auto">
         {subView === 'player' && (
           <div className="w-full flex flex-col items-center">
-            {/* Large Crisp Artwork */}
-            <div className="w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-[0_24px_70px_rgba(0,0,0,0.65)] border border-white/10 bg-zinc-900 mb-7">
-              {currentTrack.thumbnail ? (
-                <img
-                  src={currentTrack.thumbnail}
-                  alt={currentTrack.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                  <Music className="w-16 h-16" />
+            {/* Large Crisp Artwork + Floor Reflection Effect */}
+            <div className="flex flex-col items-center mb-3">
+              <div className="w-60 h-60 sm:w-76 sm:h-76 rounded-2xl overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.85)] border border-white/10 bg-[#151519] relative z-10">
+                {currentTrack.thumbnail ? (
+                  <img
+                    src={currentTrack.thumbnail}
+                    alt={currentTrack.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                    <Music className="w-16 h-16" />
+                  </div>
+                )}
+              </div>
+
+              {/* Subtle Floor Reflection */}
+              {currentTrack.thumbnail && (
+                <div
+                  aria-hidden="true"
+                  className="w-60 sm:w-76 h-16 sm:h-20 mt-0.5 rounded-t-2xl overflow-hidden pointer-events-none select-none relative"
+                  style={{
+                    WebkitMaskImage:
+                      'linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.14) 48%, rgba(0,0,0,0) 100%)',
+                    maskImage:
+                      'linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.14) 48%, rgba(0,0,0,0) 100%)',
+                  }}
+                >
+                  <img
+                    src={currentTrack.thumbnail}
+                    alt=""
+                    className="w-full h-60 sm:h-76 object-cover scale-y-[-1] opacity-55 blur-[1px]"
+                    style={{ objectPosition: 'center bottom' }}
+                  />
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
                 </div>
               )}
             </div>

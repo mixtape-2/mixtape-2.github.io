@@ -27,8 +27,15 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
   useEffect(() => {
     if (!release) return;
     setSaved(false);
+    const applyAlbumCover = (list: Track[]) =>
+      list.map((t) => ({
+        ...t,
+        thumbnail: release.thumbnail || t.thumbnail,
+        album: release.title || t.album,
+      }));
+
     if (release.tracks && release.tracks.length > 0) {
-      setTracks(release.tracks);
+      setTracks(applyAlbumCover(release.tracks));
       return;
     }
     let cancelled = false;
@@ -36,7 +43,7 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
     youtubeReleaseService
       .getReleaseDetails(release.id, release)
       .then((res) => {
-        if (!cancelled) setTracks(res?.tracks || []);
+        if (!cancelled) setTracks(applyAlbumCover(res?.tracks || []));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

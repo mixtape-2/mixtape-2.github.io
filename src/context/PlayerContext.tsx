@@ -517,11 +517,28 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const playTape = async (playlist: Playlist, startIndex: number = 0, startTime: number = 0) => {
     if (!playlist || playlist.tracks.length === 0) return;
-    const clampedIndex = Math.max(0, Math.min(startIndex, playlist.tracks.length - 1));
-    const targetTrack = playlist.tracks[clampedIndex];
+    const isAlbum = playlist.mediaType === 'vinyl';
+    const albumCover = isAlbum ? playlist.coverUrl : undefined;
+    const effectiveTracks = albumCover
+      ? playlist.tracks.map((t) => ({
+          ...t,
+          thumbnail: albumCover,
+          album: t.album || playlist.name,
+        }))
+      : playlist.tracks;
+    const clampedIndex = Math.max(0, Math.min(startIndex, effectiveTracks.length - 1));
+    const targetTrack = effectiveTracks[clampedIndex];
     setActiveTapeId(playlist.id);
     setActiveTapeName(playlist.name);
-    await playTrack(targetTrack, playlist.tracks, false, 'tape', null, playlist.id, startTime);
+    await playTrack(
+      targetTrack,
+      effectiveTracks,
+      false,
+      isAlbum ? 'vinyl' : 'tape',
+      isAlbum ? playlist.name : null,
+      playlist.id,
+      startTime
+    );
   };
 
   const togglePlay = () => {

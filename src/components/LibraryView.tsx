@@ -193,7 +193,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                 type="button"
                 disabled={rawTracks.length === 0}
                 onClick={() => {
-                  const shuffled = [...rawTracks].sort(() => Math.random() - 0.5);
+                  const albumCover =
+                    activePlaylist?.mediaType === 'vinyl' ? activePlaylist.coverUrl : undefined;
+                  const prepared = albumCover
+                    ? rawTracks.map((t) => ({ ...t, thumbnail: albumCover }))
+                    : rawTracks;
+                  const shuffled = [...prepared].sort(() => Math.random() - 0.5);
                   playTrack(shuffled[0], shuffled);
                 }}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] text-[var(--text-primary)] font-semibold text-xs hover:bg-[var(--bg-surface-hover)] disabled:opacity-50 transition cursor-pointer"
