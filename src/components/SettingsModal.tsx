@@ -225,6 +225,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <div className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] px-4">
                 <ToggleRow
+                  label="Abrir reproductor automáticamente"
+                  desc="Abre el reproductor a pantalla completa al empezar una canción"
+                  checked={settings.autoOpenPlayerDeck !== false}
+                  onChange={(v) => updateSettings({ autoOpenPlayerDeck: v })}
+                />
+                <ToggleRow
                   label="Saltar patrocinadores (SponsorBlock)"
                   desc="Omite automáticamente intros largas y segmentos patrocinados"
                   checked={settings.skipSponsors}

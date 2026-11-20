@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Play,
   Pause,
+  Square,
   SkipBack,
   SkipForward,
   Rewind,
@@ -45,6 +46,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onOpenAddToPlaylist }) => 
     isQueueOpen,
     isLyricsOpen,
     togglePlay,
+    stopPlayback,
     nextTrack,
     prevTrack,
     fastForward,
@@ -155,6 +157,16 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onOpenAddToPlaylist }) => 
               aria-label="Siguiente"
             >
               <SkipForward className="w-4.5 h-4.5 fill-current" />
+            </button>
+
+            <button
+              type="button"
+              onClick={stopPlayback}
+              className="p-2 rounded-full text-[var(--text-muted)] hover:text-[var(--theme-accent)] active:scale-95 transition cursor-pointer"
+              aria-label="Detener"
+              title="Detener"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
             </button>
           </div>
         </div>
@@ -271,6 +283,15 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onOpenAddToPlaylist }) => 
               ) : (
                 <Play className="w-4.5 h-4.5 fill-current ml-0.5" />
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={stopPlayback}
+              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--theme-accent)] transition cursor-pointer"
+              title="Detener reproducción"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
             </button>
 
             <button

@@ -3,6 +3,7 @@ import {
   ChevronDown,
   Play,
   Pause,
+  Square,
   SkipBack,
   SkipForward,
   Rewind,
@@ -50,6 +51,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     isFullScreenPlayerOpen,
     setFullScreenPlayerOpen,
     togglePlay,
+    stopPlayback,
     nextTrack,
     prevTrack,
     fastForward,
@@ -429,8 +431,8 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           </button>
         </div>
 
-        {/* Bottom Utility Row: Volume & Pitch */}
-        <div className="flex items-center justify-between gap-4 pt-1">
+        {/* Bottom Utility Row: Volume, Stop & Pitch */}
+        <div className="flex items-center justify-between gap-3 pt-1">
           <div className="flex items-center gap-2 flex-1 max-w-xs">
             <button
               type="button"
@@ -450,18 +452,30 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowPitch((p) => !p)}
-            className={`px-3 py-1.5 rounded-full text-xs font-mono-tech font-bold flex items-center gap-1.5 transition cursor-pointer ${
-              playbackRate !== 1 || showPitch
-                ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40'
-                : 'bg-white/10 text-white/80 hover:bg-white/15'
-            }`}
-          >
-            <Gauge className="w-3.5 h-3.5" />
-            <span>Pitch {playbackRate.toFixed(2)}x</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={stopPlayback}
+              className="px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 bg-white/10 text-white/80 hover:text-[var(--theme-accent)] hover:bg-white/15 transition cursor-pointer"
+              title="Detener reproducción"
+            >
+              <Square className="w-3 h-3 fill-current" />
+              <span>Stop</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowPitch((p) => !p)}
+              className={`px-3 py-1.5 rounded-full text-xs font-mono-tech font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                playbackRate !== 1 || showPitch
+                  ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] border border-[var(--theme-badge-border)]'
+                  : 'bg-white/10 text-white/80 hover:bg-white/15'
+              }`}
+            >
+              <Gauge className="w-3.5 h-3.5" />
+              <span>Pitch {playbackRate.toFixed(2)}x</span>
+            </button>
+          </div>
         </div>
 
         {showPitch && (
