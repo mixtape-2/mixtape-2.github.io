@@ -306,11 +306,20 @@ class StreamResolver {
     return [];
   }
 
+  private readonly COMPANION_NODES = [
+    'https://yt.chocolatemoo53.com',
+    'https://inv.perditum.com',
+    'https://inv.nadeko.net',
+    'https://invidious.nerdvpn.de',
+    'https://yewtu.be',
+  ];
+
   /**
    * Direct dispatcher URL for a YouTube ID (itag 140 = M4A/AAC, itag 251 = WebM/Opus).
    */
-  getDirectStreamUrl(youtubeId: string, itag: 140 | 251 = 140): string {
-    return `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=${itag}&local=true`;
+  getDirectStreamUrl(youtubeId: string, itag: 140 | 251 = 140, nodeOrigin?: string): string {
+    const base = nodeOrigin || this.COMPANION_NODES[0];
+    return `${base}/latest_version?id=${youtubeId}&itag=${itag}&local=true`;
   }
 
   /**
@@ -388,22 +397,20 @@ class StreamResolver {
       typeof document !== 'undefined' &&
       !!document.createElement('audio').canPlayType('audio/webm; codecs="opus"');
 
-    const endpoints = supportsOpus
-      ? [
-          this.getDirectStreamUrl(youtubeId, 140),
-          this.getDirectStreamUrl(youtubeId, 251),
-        ]
-      : [this.getDirectStreamUrl(youtubeId, 140)];
+    const endpoints: string[] = [];
+    for (const node of this.COMPANION_NODES) {
+      if (excludeOrigin && node.includes(excludeOrigin)) continue;
+      endpoints.push(this.getDirectStreamUrl(youtubeId, 140, node));
+      if (supportsOpus && node === this.COMPANION_NODES[0]) {
+        endpoints.push(this.getDirectStreamUrl(youtubeId, 251, node));
+      }
+    }
 
     const controllers: AbortController[] = [];
 
     try {
       const winningUrl = await Promise.any(
         endpoints.map(async (endpoint) => {
-          if (excludeOrigin && endpoint.includes(excludeOrigin)) {
-            throw new Error('Excluded endpoint');
-          }
-
           const controller = new AbortController();
           controllers.push(controller);
           const timeoutId = setTimeout(() => controller.abort(), 4500);
@@ -456,9 +463,7 @@ class StreamResolver {
       }
     }
 
-    if (!excludeOrigin) {
-      return this.getDirectStreamUrl(youtubeId, 140);
-    }
+    // Return null when no companion node succeeded so Audius ad-free fallback can run cleanly
     return null;
   }
 

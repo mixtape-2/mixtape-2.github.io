@@ -83,6 +83,9 @@ class AudioEngine {
   private playbackRate: number = 1.0;
   private syncTimer: any = null;
   private isAdActive: boolean = false;
+  private adBypassAttemptsForTrack: number = 0;
+  private lastKnownSongTime: number = 0;
+  private lastAdReloadAt: number = 0;
   private hasPostMessageListener: boolean = false;
   private shouldBePlaying: boolean = false;
   private backgroundAudio: HTMLAudioElement | null = null;
@@ -539,7 +542,8 @@ class AudioEngine {
             if (isAd) {
               this.handleAdDetected(info);
             } else if (info.adState === 0 || info.isAdPlaying === false) {
-              this.handleAdFinished();
+              // Verify actual loaded video matches expected song before unmuting
+              this.checkAndSkipYouTubeAds();
             }
           }
         } catch {
@@ -646,14 +650,17 @@ class AudioEngine {
   }
 
   /**
-   * Instantly silences and fast-forwards ads when detected via postMessage or player inspect
+   * Instantly silences, fast-forwards, and attempts reload-bypass when an ad is detected
    */
   private handleAdDetected(info?: any) {
     if (!this.ytPlayer) return;
     this.isAdActive = true;
     try {
-      // 1. Instantly mute so ad audio never reaches the user's ears
+      // 1. Instantly mute + zero volume so ad audio NEVER reaches the user's ears
       this.ytPlayer.mute();
+      if (typeof this.ytPlayer.setVolume === 'function') {
+        this.ytPlayer.setVolume(0);
+      }
 
       // 2. Accelerate ad to maximum rate (2.0x)
       if (typeof this.ytPlayer.setPlaybackRate === 'function') {
@@ -671,6 +678,27 @@ class AudioEngine {
           this.ytPlayer.seekTo(info.adDuration + 2, true);
         }
       }
+
+      // 5. Reload-bypass: reloading the song directly at lastKnownSongTime frequently clears pre-roll/mid-roll ads
+      const now = Date.now();
+      if (
+        this.currentTrack?.youtubeId &&
+        this.adBypassAttemptsForTrack < 2 &&
+        now - this.lastAdReloadAt > 1800
+      ) {
+        this.adBypassAttemptsForTrack++;
+        this.lastAdReloadAt = now;
+        const resumeAt = Math.max(0.1, this.lastKnownSongTime);
+        this.ytPlayer.loadVideoById({
+          videoId: this.currentTrack.youtubeId,
+          startSeconds: resumeAt,
+          suggestedQuality: 'small',
+        });
+        this.ytPlayer.mute();
+        if (typeof this.ytPlayer.setVolume === 'function') {
+          this.ytPlayer.setVolume(0);
+        }
+      }
     } catch {
       // Ignored
     }
@@ -683,7 +711,7 @@ class AudioEngine {
       this.ytPlayer.unMute();
       this.ytPlayer.setVolume(Math.round(this.volume * 100));
       if (typeof this.ytPlayer.setPlaybackRate === 'function') {
-        this.ytPlayer.setPlaybackRate(1.0);
+        this.ytPlayer.setPlaybackRate(this.playbackRate);
       }
     } catch {
       // Ignored
@@ -691,7 +719,8 @@ class AudioEngine {
   }
 
   /**
-   * Automatically detects and skips/mutes YouTube pre-roll & mid-roll advertisements
+   * Automatically detects and silences/skips YouTube pre-roll & mid-roll advertisements.
+   * Uses strict Mute-First verification: only unmutes when video_id and duration match the actual song.
    */
   private checkAndSkipYouTubeAds() {
     if (!this.ytPlayer || !this.isUsingYouTube || !this.currentTrack) return;
@@ -715,23 +744,29 @@ class AudioEngine {
       const expectedId = this.currentTrack.youtubeId;
       const expectedDur = this.currentTrack.duration || 0;
 
-      // An ad is identified if:
-      // a) adState is active (1) or isAdPlaying is true
-      // b) The currently loaded video_id is different from the desired song ID
-      // c) The video duration is an ad length (<= 45s) while our song is longer (> 80s)
-      const isAd =
-        adState === 1 ||
-        isAdPlaying === true ||
-        (videoData && videoData.video_id && expectedId && videoData.video_id !== expectedId) ||
-        (expectedDur > 80 && curDur > 0 && curDur <= 45 && Math.abs(curDur - expectedDur) > 10);
+      const loadedId = videoData?.video_id || '';
+      const idMismatch = Boolean(loadedId && expectedId && loadedId !== expectedId);
+      const shortAdDuration =
+        expectedDur > 80 && curDur > 0 && curDur <= 45 && Math.abs(curDur - expectedDur) > 10;
+
+      const isAd = adState === 1 || isAdPlaying === true || idMismatch || shortAdDuration;
 
       if (isAd) {
         this.handleAdDetected();
         if (typeof this.ytPlayer.seekTo === 'function' && curDur > 0 && curTime < curDur) {
           this.ytPlayer.seekTo(curDur + 1, true);
         }
-      } else if (this.isAdActive) {
-        this.handleAdFinished();
+      } else {
+        // Track confirmed as the real song: record timestamp and safely unmute if muted by ad guard
+        const isConfirmedRealSong =
+          (!expectedId || !loadedId || loadedId === expectedId) &&
+          (curDur > 0 || curTime > 0);
+        if (isConfirmedRealSong) {
+          if (curTime > 0) this.lastKnownSongTime = curTime;
+          if (this.isAdActive) {
+            this.handleAdFinished();
+          }
+        }
       }
     } catch {
       // Ignored
@@ -754,10 +789,14 @@ class AudioEngine {
     if (state === 1) {
       this.shouldBePlaying = true;
       this.keepBackgroundAudioAlive();
+      this.checkAndSkipYouTubeAds();
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
       }
       this.startYouTubeSync();
+    } else if (state === 3) {
+      // Buffering: inspect immediately in case a pre-roll ad is loading
+      this.checkAndSkipYouTubeAds();
     } else {
       if (state === 2) {
         if (typeof document !== 'undefined' && document.hidden && this.shouldBePlaying) {
@@ -797,7 +836,7 @@ class AudioEngine {
         this.onTimeUpdateCallbacks.forEach((cb) => cb(cur, dur, buf));
         this.checkCrossfadeTrigger(cur, dur);
       }
-    }, 250);
+    }, 100);
   }
 
   private stopYouTubeSync() {
@@ -922,17 +961,25 @@ class AudioEngine {
     }
 
     try {
+      // Mute-First shield: keep player muted until checkAndSkipYouTubeAds confirms the real song (not a pre-roll ad)
+      this.isAdActive = true;
+      this.adBypassAttemptsForTrack = 0;
+      this.lastKnownSongTime = startTime && startTime > 0 ? startTime : 0;
+      this.ytPlayer.mute();
+      if (typeof this.ytPlayer.setVolume === 'function') {
+        this.ytPlayer.setVolume(0);
+      }
+
       this.ytPlayer.loadVideoById({
         videoId: track.youtubeId,
         startSeconds: startTime && startTime > 0 ? startTime : 0.1,
         suggestedQuality: 'small',
       });
-      this.ytPlayer.unMute();
-      this.ytPlayer.setVolume(Math.round(this.volume * 100));
       const res = this.ytPlayer.playVideo();
       if (res && typeof res.catch === 'function') {
         res.catch((e: any) => console.warn('YouTube playVideo rejected on mobile:', e));
       }
+      this.startYouTubeSync();
       this.notifyState();
       return true;
     } catch (err) {
