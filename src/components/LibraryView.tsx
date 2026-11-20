@@ -5,9 +5,12 @@ import {
   Shuffle,
   Heart,
   ListMusic,
+  Mic2,
   Disc3,
+  Music,
   Podcast,
   ArrowLeft,
+  ChevronRight,
   Pencil,
   Trash2,
   Search,
@@ -35,8 +38,27 @@ interface LibraryViewProps {
   onAddTrackToPlaylist: (track: Track) => void;
 }
 
-type LibrarySubTab = 'tapes' | 'vinyls' | 'favorites' | 'podcasts';
+type LibrarySection = 'root' | 'playlists' | 'artists' | 'albums' | 'songs' | 'podcasts';
 type BpmFilter = 'all' | '33' | '45' | '78';
+
+interface RecentItem {
+  key: string;
+  kind: 'playlist' | 'album' | 'podcast' | 'track';
+  title: string;
+  subtitle: string;
+  artwork?: string;
+  timestamp: number;
+  playlist?: Playlist;
+  podcast?: PodcastShow;
+  track?: Track;
+}
+
+interface ArtistEntry {
+  name: string;
+  photo?: string;
+  albums: Playlist[];
+  tracks: Track[];
+}
 
 export const LibraryView: React.FC<LibraryViewProps> = ({
   selectedPlaylistId,
@@ -61,8 +83,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
   const { playTrack, playTape } = usePlayer();
 
-  const [subTab, setSubTab] = useState<LibrarySubTab>(isFavoritesView ? 'favorites' : 'tapes');
+  const [section, setSection] = useState<LibrarySection>('root');
+  const [selectedArtistName, setSelectedArtistName] = useState<string | null>(null);
   const [filterText, setFilterText] = useState('');
+  const [songsSearch, setSongsSearch] = useState('');
   const [bpmFilter, setBpmFilter] = useState<BpmFilter>('all');
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
   const [resumePrompt, setResumePrompt] = useState<{
@@ -70,6 +94,126 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     progress: TapeProgress;
   } | null>(null);
   const [selectedPodcast, setSelectedPodcast] = useState<PodcastShow | null>(null);
+
+  // Derived collections
+  const userPlaylists = useMemo(
+    () => playlists.filter((p) => p.mediaType !== 'vinyl'),
+    [playlists]
+  );
+
+  const savedAlbums = useMemo(
+    () =>
+      playlists
+        .filter((p) => p.mediaType === 'vinyl')
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })),
+    [playlists]
+  );
+
+  const allSongsAlphabetical = useMemo(() => {
+    const map = new Map<string, Track>();
+    for (const t of likedTracks) {
+      if (!map.has(t.id)) map.set(t.id, t);
+    }
+    for (const pl of playlists) {
+      const albumCover = pl.mediaType === 'vinyl' ? pl.coverUrl : undefined;
+      for (const t of pl.tracks) {
+        if (!map.has(t.id)) {
+          map.set(t.id, albumCover ? { ...t, thumbnail: albumCover } : t);
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      a.title.localeCompare(b.title, 'es', { sensitivity: 'base' })
+    );
+  }, [likedTracks, playlists]);
+
+  const artistsAlphabetical = useMemo<ArtistEntry[]>(() => {
+    const map = new Map<string, ArtistEntry>();
+
+    const ensureArtist = (rawName: string, photo?: string): ArtistEntry => {
+      const clean = (rawName || 'Artista desconocido').trim();
+      const key = clean.toLowerCase();
+      let entry = map.get(key);
+      if (!entry) {
+        entry = { name: clean, photo, albums: [], tracks: [] };
+        map.set(key, entry);
+      } else if (!entry.photo && photo) {
+        entry.photo = photo;
+      }
+      return entry;
+    };
+
+    for (const alb of savedAlbums) {
+      const artistName = alb.artist || alb.tracks[0]?.artist || 'Varios Artistas';
+      const photo = alb.coverUrl || alb.tracks[0]?.thumbnail;
+      const entry = ensureArtist(artistName, photo);
+      entry.albums.push(alb);
+    }
+
+    for (const t of allSongsAlphabetical) {
+      const entry = ensureArtist(t.artist, t.thumbnail);
+      entry.tracks.push(t);
+    }
+
+    return Array.from(map.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+    );
+  }, [savedAlbums, allSongsAlphabetical]);
+
+  const podcastsAlphabetical = useMemo(
+    () =>
+      followedPodcasts
+        .slice()
+        .sort((a, b) => a.title.localeCompare(b.title, 'es', { sensitivity: 'base' })),
+    [followedPodcasts]
+  );
+
+  const recentlyAdded = useMemo<RecentItem[]>(() => {
+    const items: RecentItem[] = [];
+
+    for (const pl of playlists) {
+      items.push({
+        key: `pl_${pl.id}`,
+        kind: pl.mediaType === 'vinyl' ? 'album' : 'playlist',
+        title: pl.name,
+        subtitle:
+          pl.mediaType === 'vinyl'
+            ? pl.artist || 'Álbum'
+            : `Playlist · ${pl.tracks.length} pistas`,
+        artwork: pl.coverUrl || pl.tracks[0]?.thumbnail,
+        timestamp: pl.updatedAt || pl.createdAt || 0,
+        playlist: pl,
+      });
+    }
+
+    for (const show of followedPodcasts) {
+      items.push({
+        key: `pod_${show.id}`,
+        kind: 'podcast',
+        title: show.title,
+        subtitle: show.author || 'Podcast',
+        artwork: show.artwork,
+        timestamp: show.followedAt || 0,
+        podcast: show,
+      });
+    }
+
+    likedTracks.forEach((t, idx) => {
+      items.push({
+        key: `trk_${t.id}`,
+        kind: 'track',
+        title: t.title,
+        subtitle: t.artist,
+        artwork: t.thumbnail,
+        timestamp: t.addedAt || Date.now() - (idx + 1) * 60_000,
+        track: t,
+      });
+    });
+
+    items.sort((a, b) => b.timestamp - a.timestamp);
+    return items.slice(0, 20);
+  }, [playlists, followedPodcasts, likedTracks]);
 
   const activePlaylist = useMemo(() => {
     if (isFavoritesView || selectedPlaylistId === 'favorites') return null;
@@ -89,15 +233,18 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     }
   };
 
-  // DETAIL VIEW (Playlist or Favorites)
+  // =========================================================================
+  // 1. PLAYLIST / ALBUM / FAVORITES DETAIL VIEW
+  // =========================================================================
   if (activePlaylist || showingFavoritesDetail) {
+    const isAlbum = activePlaylist?.mediaType === 'vinyl';
     const title = showingFavoritesDetail ? 'Canciones Favoritas' : activePlaylist!.name;
     const subtitle = showingFavoritesDetail
       ? 'Tu colección personal de pistas marcadas con corazón'
       : activePlaylist!.description ||
         (activePlaylist!.artist
           ? `${activePlaylist!.artist}${activePlaylist!.year ? ` · ${activePlaylist!.year}` : ''}`
-          : 'Lista de reproducción');
+          : 'Playlist');
 
     const rawTracks = showingFavoritesDetail ? likedTracks : activePlaylist!.tracks;
     const totalDuration = rawTracks.reduce((acc, t) => acc + (t.duration || 0), 0);
@@ -119,9 +266,17 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
     const savedProgress = activePlaylist ? tapeProgressService.getProgress(activePlaylist.id) : null;
 
+    const backLabel =
+      section === 'albums'
+        ? 'Volver a Álbumes'
+        : section === 'artists' && selectedArtistName
+        ? `Volver a ${selectedArtistName}`
+        : section === 'playlists'
+        ? 'Volver a Playlists'
+        : 'Volver a Biblioteca';
+
     return (
       <div className="space-y-6 pb-8">
-        {/* Back Button */}
         <button
           type="button"
           onClick={() => {
@@ -129,10 +284,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             setBpmFilter('all');
             setSelectedPlaylistId(null);
           }}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:underline transition cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          Volver a Biblioteca
+          {backLabel}
         </button>
 
         {/* Hero Header */}
@@ -150,18 +305,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-                <ListMusic className="w-12 h-12" />
+                {isAlbum ? <Disc3 className="w-12 h-12" /> : <ListMusic className="w-12 h-12" />}
               </div>
             )}
           </div>
 
           <div className="flex-1 min-w-0">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--theme-accent)]">
-              {showingFavoritesDetail
-                ? 'Favoritos'
-                : activePlaylist!.mediaType === 'vinyl'
-                ? 'Álbum'
-                : 'Playlist'}
+              {showingFavoritesDetail ? 'Favoritos' : isAlbum ? 'Álbum' : 'Playlist'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mt-1 leading-tight">
               {title}
@@ -171,7 +322,6 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               {rawTracks.length} pistas · {formatDuration(totalDuration)}
             </p>
 
-            {/* Primary Actions */}
             <div className="flex flex-wrap items-center gap-2 mt-4">
               <button
                 type="button"
@@ -183,7 +333,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     handlePlayPlaylistSmart(activePlaylist!);
                   }
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--theme-accent)] text-black font-bold text-xs hover:brightness-110 disabled:opacity-50 transition cursor-pointer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--theme-accent)] text-white font-bold text-xs hover:brightness-110 disabled:opacity-50 transition cursor-pointer"
               >
                 <Play className="w-4 h-4 fill-current" />
                 {savedProgress ? 'Reproducir / Reanudar' : 'Reproducir'}
@@ -213,20 +363,20 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     type="button"
                     onClick={() => setEditingPlaylist(activePlaylist)}
                     className="p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition cursor-pointer"
-                    title="Editar lista"
+                    title="Editar"
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      if (window.confirm(`¿Eliminar la lista "${activePlaylist.name}"?`)) {
+                      if (window.confirm(`¿Eliminar "${activePlaylist.name}"?`)) {
                         deletePlaylist(activePlaylist.id);
                         setSelectedPlaylistId(null);
                       }
                     }}
-                    className="p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-rose-400 transition cursor-pointer"
-                    title="Eliminar lista"
+                    className="p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--theme-accent)] transition cursor-pointer"
+                    title="Eliminar"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -241,7 +391,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                       clearLikedTracks();
                     }
                   }}
-                  className="px-3.5 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-semibold hover:bg-rose-500/20 transition cursor-pointer"
+                  className="px-3.5 py-2.5 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] text-[var(--theme-badge-text)] text-xs font-semibold hover:brightness-110 transition cursor-pointer"
                 >
                   Vaciar
                 </button>
@@ -250,7 +400,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           </div>
         </div>
 
-        {/* Inline Filter & BPM Range Pills */}
+        {/* Inline Filter & BPM Pills */}
         {rawTracks.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -259,7 +409,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                 type="text"
                 value={filterText}
                 onChange={(e) => setFilterText(e.target.value)}
-                placeholder="Filtrar canciones en esta lista..."
+                placeholder="Filtrar pistas..."
                 className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-accent)]"
               />
             </div>
@@ -294,14 +444,16 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         {filteredTracks.length === 0 ? (
           <div className="py-16 text-center text-sm text-[var(--text-muted)]">
             {rawTracks.length === 0
-              ? 'Esta lista todavía no tiene canciones.'
-              : 'No hay pistas que coincidan con el filtro actual.'}
+              ? 'Todavía no hay canciones aquí.'
+              : 'No hay pistas que coincidan con el filtro.'}
           </div>
         ) : (
           <div className="space-y-1">
             {filteredTracks.map((track, idx) => {
               const isUnfiltered = !filterText.trim() && bpmFilter === 'all';
-              const trackWithBpm = track.bpm ? track : { ...track, bpm: bpmService.getTrackBpm(track) };
+              const trackWithBpm = track.bpm
+                ? track
+                : { ...track, bpm: bpmService.getTrackBpm(track) };
               return (
                 <TrackRow
                   key={`${track.id}_${idx}`}
@@ -309,7 +461,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   index={idx}
                   queue={filteredTracks}
                   showBpm
-                  hideThumbnail={activePlaylist?.mediaType === 'vinyl'}
+                  hideThumbnail={isAlbum}
                   onPlay={() =>
                     showingFavoritesDetail
                       ? playTrack(track, filteredTracks)
@@ -372,101 +524,523 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     );
   }
 
-  // LIBRARY OVERVIEW
-  const tapes = playlists.filter((p) => p.mediaType !== 'vinyl');
-  const vinyls = playlists.filter((p) => p.mediaType === 'vinyl');
+  // =========================================================================
+  // 2. SUB-SCREENS FOR EACH LIBRARY SECTION
+  // =========================================================================
 
-  const subTabs: { id: LibrarySubTab; label: string; count: number; icon: any }[] = [
-    { id: 'tapes', label: 'Listas', count: tapes.length, icon: ListMusic },
-    { id: 'vinyls', label: 'Álbumes', count: vinyls.length, icon: Disc3 },
-    { id: 'favorites', label: 'Favoritos', count: likedTracks.length, icon: Heart },
-    { id: 'podcasts', label: 'Podcasts', count: followedPodcasts.length, icon: Podcast },
-  ];
-
-  const renderPlaylistGrid = (items: Playlist[], emptyMsg: string) => {
-    if (items.length === 0) {
-      return (
-        <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-[var(--text-muted)]">
-          <p className="text-sm font-medium">{emptyMsg}</p>
+  // --- PLAYLISTS SCREEN (vertical list with cover on the left) ---
+  if (section === 'playlists') {
+    return (
+      <div className="space-y-5 pb-8">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <button
+              type="button"
+              onClick={() => setSection('root')}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:underline mb-2 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Biblioteca
+            </button>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+              Playlists
+            </h1>
+          </div>
           <button
             type="button"
             onClick={openNewPlaylistModal}
-            className="mt-3 px-4 py-2 rounded-xl bg-[var(--theme-accent)] text-black font-bold text-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--theme-accent)] text-white text-xs font-bold hover:brightness-110 transition cursor-pointer"
           >
-            + Crear Lista
+            <Plus className="w-4 h-4" />
+            Nueva Playlist
           </button>
+        </div>
+
+        <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+          {/* Favorites Row */}
+          <div
+            onClick={() => setSelectedPlaylistId('favorites')}
+            className="flex items-center gap-3.5 px-4 py-3 hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-accent)] shrink-0">
+              <Heart className="w-5 h-5 fill-current" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-[var(--text-primary)] truncate">Favoritos</p>
+              <p className="text-xs text-[var(--text-muted)]">{likedTracks.length} canciones</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+          </div>
+
+          {userPlaylists.length === 0 ? (
+            <div className="py-12 text-center text-sm text-[var(--text-muted)]">
+              Aún no has creado ninguna playlist.
+            </div>
+          ) : (
+            userPlaylists.map((pl) => {
+              const prog = tapeProgressService.getProgress(pl.id);
+              return (
+                <div
+                  key={pl.id}
+                  onClick={() => setSelectedPlaylistId(pl.id)}
+                  className="group flex items-center gap-3.5 px-4 py-3 hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
+                >
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/30 flex items-center justify-center shrink-0">
+                    {pl.coverUrl || pl.tracks[0]?.thumbnail ? (
+                      <img
+                        src={pl.coverUrl || pl.tracks[0]?.thumbnail}
+                        alt={pl.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ListMusic className="w-5 h-5 text-[var(--text-muted)]" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[var(--text-primary)] truncate">
+                      {pl.name}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mt-0.5">
+                      <span>{pl.tracks.length} pistas</span>
+                      {prog && (
+                        <span className="inline-flex items-center gap-1 text-[var(--theme-accent)] font-semibold">
+                          <Clock className="w-3 h-3" />
+                          En curso
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {pl.tracks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlayPlaylistSmart(pl);
+                      }}
+                      className="p-2 rounded-full bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                      title="Reproducir"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                    </button>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <ResumeTapeModal
+          isOpen={!!resumePrompt}
+          progress={resumePrompt?.progress || null}
+          onResume={() => {
+            if (resumePrompt) {
+              playTape(
+                resumePrompt.playlist,
+                resumePrompt.progress.trackIndex,
+                resumePrompt.progress.currentTime
+              );
+            }
+            setResumePrompt(null);
+          }}
+          onRestart={() => {
+            if (resumePrompt) {
+              tapeProgressService.clearProgress(resumePrompt.playlist.id);
+              playTape(resumePrompt.playlist, 0, 0);
+            }
+            setResumePrompt(null);
+          }}
+          onClose={() => setResumePrompt(null)}
+        />
+      </div>
+    );
+  }
+
+  // --- ARTISTS SCREEN (alphabetical list with photo on the left -> opens artist's saved albums) ---
+  if (section === 'artists') {
+    if (selectedArtistName) {
+      const artistEntry = artistsAlphabetical.find(
+        (a) => a.name.toLowerCase() === selectedArtistName.toLowerCase()
+      );
+      const artistAlbums = artistEntry?.albums || [];
+      const artistTracks = artistEntry?.tracks || [];
+
+      return (
+        <div className="space-y-6 pb-8">
+          <div>
+            <button
+              type="button"
+              onClick={() => setSelectedArtistName(null)}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:underline mb-2 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Artistas
+            </button>
+            <div className="flex items-center gap-3.5">
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0">
+                {artistEntry?.photo ? (
+                  <img
+                    src={artistEntry.photo}
+                    alt={selectedArtistName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Mic2 className="w-6 h-6 text-[var(--text-muted)]" />
+                )}
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+                  {selectedArtistName}
+                </h1>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {artistAlbums.length} {artistAlbums.length === 1 ? 'álbum guardado' : 'álbumes guardados'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {artistAlbums.length > 0 ? (
+            <section>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">
+                Álbumes guardados
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+                {artistAlbums.map((alb) => (
+                  <div
+                    key={alb.id}
+                    onClick={() => setSelectedPlaylistId(alb.id)}
+                    className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                  >
+                    <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
+                      {alb.coverUrl || alb.tracks[0]?.thumbnail ? (
+                        <img
+                          src={alb.coverUrl || alb.tracks[0]?.thumbnail}
+                          alt={alb.name}
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+                          <Disc3 className="w-10 h-10" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm font-bold text-[var(--text-primary)] truncate">
+                      {alb.name}
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">
+                      {alb.year ? `${alb.year} · ` : ''}
+                      {alb.tracks.length} pistas
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <div className="p-6 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-center text-sm text-[var(--text-muted)]">
+              No tienes álbumes guardados de {selectedArtistName}.
+            </div>
+          )}
+
+          {artistTracks.length > 0 && artistAlbums.length === 0 && (
+            <section className="space-y-1">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                Canciones guardadas ({artistTracks.length})
+              </h2>
+              {artistTracks.map((track, idx) => (
+                <TrackRow
+                  key={track.id}
+                  track={track}
+                  index={idx}
+                  queue={artistTracks}
+                  onPlay={() => playTrack(track, artistTracks, false, undefined, 'songs-mini')}
+                  onAddToPlaylist={onAddTrackToPlaylist}
+                />
+              ))}
+            </section>
+          )}
         </div>
       );
     }
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
-        {items.map((pl) => {
-          const prog = tapeProgressService.getProgress(pl.id);
-          return (
-            <div
-              key={pl.id}
-              onClick={() => setSelectedPlaylistId(pl.id)}
-              className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
-            >
-              <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
-                {pl.coverUrl || pl.tracks[0]?.thumbnail ? (
-                  <img
-                    src={pl.coverUrl || pl.tracks[0]?.thumbnail}
-                    alt={pl.name}
-                    loading="lazy"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
-                    {pl.mediaType === 'vinyl' ? (
-                      <Disc3 className="w-10 h-10" />
-                    ) : (
-                      <ListMusic className="w-10 h-10" />
-                    )}
-                  </div>
-                )}
+      <div className="space-y-5 pb-8">
+        <div>
+          <button
+            type="button"
+            onClick={() => setSection('root')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:underline mb-2 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Biblioteca
+          </button>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+            Artistas
+          </h1>
+        </div>
 
-                {prog && (
-                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/75 text-amber-300 flex items-center gap-1 backdrop-blur-sm">
-                    <Clock className="w-2.5 h-2.5" />
-                    En curso
-                  </span>
-                )}
-
-                {pl.tracks.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePlayPlaylistSmart(pl);
-                    }}
-                    className="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-full bg-[var(--theme-accent)] text-black flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 shadow-lg transition-all cursor-pointer"
-                    title="Reproducir"
-                  >
-                    <Play className="w-4.5 h-4.5 fill-current ml-0.5" />
-                  </button>
-                )}
+        {artistsAlphabetical.length === 0 ? (
+          <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
+            Aún no tienes artistas en tu biblioteca.
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+            {artistsAlphabetical.map((artist) => (
+              <div
+                key={artist.name}
+                onClick={() => setSelectedArtistName(artist.name)}
+                className="flex items-center gap-3.5 px-4 py-3 hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
+              >
+                <div className="w-11 h-11 rounded-full overflow-hidden bg-black/30 flex items-center justify-center shrink-0">
+                  {artist.photo ? (
+                    <img
+                      src={artist.photo}
+                      alt={artist.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Mic2 className="w-5 h-5 text-[var(--text-muted)]" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[var(--text-primary)] truncate">
+                    {artist.name}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {artist.albums.length > 0
+                      ? `${artist.albums.length} ${artist.albums.length === 1 ? 'álbum' : 'álbumes'}`
+                      : `${artist.tracks.length} ${artist.tracks.length === 1 ? 'canción' : 'canciones'}`}
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
               </div>
-
-              <p className="text-sm font-bold text-[var(--text-primary)] truncate">{pl.name}</p>
-              <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">
-                {pl.artist ? `${pl.artist} · ` : ''}
-                {pl.tracks.length} pistas
-              </p>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+        )}
       </div>
     );
-  };
+  }
+
+  // --- ALBUMS SCREEN (alphabetical cover grid -> selecting opens album player) ---
+  if (section === 'albums') {
+    return (
+      <div className="space-y-5 pb-8">
+        <div>
+          <button
+            type="button"
+            onClick={() => setSection('root')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:underline mb-2 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Biblioteca
+          </button>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+            Álbumes
+          </h1>
+        </div>
+
+        {savedAlbums.length === 0 ? (
+          <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
+            Guarda álbumes desde Explorar para verlos aquí ordenados alfabéticamente.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+            {savedAlbums.map((alb) => (
+              <div
+                key={alb.id}
+                onClick={() => {
+                  setSelectedPlaylistId(alb.id);
+                  if (alb.tracks.length > 0) {
+                    playTape(alb, 0);
+                  }
+                }}
+                className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+              >
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
+                  {alb.coverUrl || alb.tracks[0]?.thumbnail ? (
+                    <img
+                      src={alb.coverUrl || alb.tracks[0]?.thumbnail}
+                      alt={alb.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+                      <Disc3 className="w-10 h-10" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm font-bold text-[var(--text-primary)] truncate">{alb.name}</p>
+                <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">
+                  {alb.artist || alb.tracks[0]?.artist || 'Álbum'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- SONGS SCREEN (alphabetical list -> clicking plays in mini-player ONLY) ---
+  if (section === 'songs') {
+    const q = songsSearch.trim().toLowerCase();
+    const visibleSongs = q
+      ? allSongsAlphabetical.filter(
+          (t) =>
+            t.title.toLowerCase().includes(q) ||
+            t.artist.toLowerCase().includes(q) ||
+            (t.album || '').toLowerCase().includes(q)
+        )
+      : allSongsAlphabetical;
+
+    return (
+      <div className="space-y-5 pb-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setSongsSearch('');
+                setSection('root');
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:underline mb-2 cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Biblioteca
+            </button>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+              Canciones
+            </h1>
+          </div>
+
+          {allSongsAlphabetical.length > 0 && (
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={songsSearch}
+                onChange={(e) => setSongsSearch(e.target.value)}
+                placeholder="Filtrar canciones..."
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-accent)]"
+              />
+            </div>
+          )}
+        </div>
+
+        {visibleSongs.length === 0 ? (
+          <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
+            {allSongsAlphabetical.length === 0
+              ? 'No tienes canciones guardadas todavía.'
+              : 'Ninguna canción coincide con tu filtro.'}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {visibleSongs.map((track, idx) => (
+              <TrackRow
+                key={track.id}
+                track={track}
+                index={idx}
+                queue={visibleSongs}
+                onPlay={() => playTrack(track, visibleSongs, false, undefined, 'songs-mini')}
+                onAddToPlaylist={onAddTrackToPlaylist}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- PODCASTS SCREEN (alphabetical vertical list) ---
+  if (section === 'podcasts') {
+    return (
+      <div className="space-y-5 pb-8">
+        <div>
+          <button
+            type="button"
+            onClick={() => setSection('root')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:underline mb-2 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Biblioteca
+          </button>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+            Podcasts
+          </h1>
+        </div>
+
+        {podcastsAlphabetical.length === 0 ? (
+          <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
+            No sigues ningún podcast todavía. Descubre programas en la pestaña Podcasts.
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+            {podcastsAlphabetical.map((show) => (
+              <div
+                key={show.id}
+                onClick={() => setSelectedPodcast(show)}
+                className="flex items-center gap-3.5 px-4 py-3 hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/30 flex items-center justify-center shrink-0">
+                  {show.artwork ? (
+                    <img
+                      src={show.artwork}
+                      alt={show.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Podcast className="w-5 h-5 text-[var(--text-muted)]" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[var(--text-primary)] truncate">
+                    {show.title}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{show.author}</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <PodcastDetailModal
+          show={selectedPodcast}
+          onClose={() => setSelectedPodcast(null)}
+          onAddTrackToPlaylist={onAddTrackToPlaylist}
+        />
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 3. LIBRARY ROOT VIEW (5 Sections at top + Recently Added covers below)
+  // =========================================================================
+  const menuRows: {
+    id: Exclude<LibrarySection, 'root'>;
+    label: string;
+    count: number;
+    icon: React.FC<{ className?: string }>;
+  }[] = [
+    { id: 'playlists', label: 'Playlists', count: userPlaylists.length + (likedTracks.length > 0 ? 1 : 0), icon: ListMusic },
+    { id: 'artists', label: 'Artistas', count: artistsAlphabetical.length, icon: Mic2 },
+    { id: 'albums', label: 'Álbumes', count: savedAlbums.length, icon: Disc3 },
+    { id: 'songs', label: 'Canciones', count: allSongsAlphabetical.length, icon: Music },
+    { id: 'podcasts', label: 'Podcasts', count: podcastsAlphabetical.length, icon: Podcast },
+  ];
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Header & Quick Actions */}
+    <div className="space-y-7 pb-8">
+      {/* Header & Utility Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
-          Tu Biblioteca
+          Biblioteca
         </h1>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -496,133 +1070,92 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         </div>
       </div>
 
-      {/* Segmented Tabs */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-        {subTabs.map((t) => {
-          const Icon = t.icon;
-          const active = subTab === t.id;
+      {/* Top 5 Navigation Sections with Left Icons */}
+      <nav className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+        {menuRows.map((row) => {
+          const Icon = row.icon;
           return (
             <button
-              key={t.id}
+              key={row.id}
               type="button"
-              onClick={() => setSubTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
-                active
-                  ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border border-[var(--theme-badge-border)]'
-                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
-              }`}
+              onClick={() => {
+                setSelectedArtistName(null);
+                setSection(row.id);
+              }}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-[var(--bg-surface-hover)] transition text-left cursor-pointer"
             >
-              <Icon className="w-3.5 h-3.5" />
-              {t.label}
-              <span className="opacity-70 font-mono-tech">({t.count})</span>
+              <div className="flex items-center gap-3.5">
+                <Icon className="w-5 h-5 text-[var(--theme-accent)] shrink-0" />
+                <span className="text-base font-semibold text-[var(--text-primary)]">
+                  {row.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                <span className="text-xs font-mono-tech">{row.count}</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
             </button>
           );
         })}
-      </div>
+      </nav>
 
-      {/* SubTab Content */}
-      {subTab === 'tapes' &&
-        renderPlaylistGrid(tapes, 'Aún no tienes listas de reproducción creadas.')}
-
-      {subTab === 'vinyls' &&
-        renderPlaylistGrid(
-          vinyls,
-          'Guarda cualquier álbum desde Explorar para verlo aquí.'
-        )}
-
-      {subTab === 'favorites' && (
-        <div className="space-y-3">
-          {likedTracks.length > 0 && (
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => playTrack(likedTracks[0], likedTracks)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--theme-accent)] text-black font-bold text-xs cursor-pointer"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                Reproducir Favoritos ({likedTracks.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedPlaylistId('favorites')}
-                className="text-xs font-semibold text-[var(--theme-accent)] hover:underline cursor-pointer"
-              >
-                Ver detalle y filtros BPM →
-              </button>
-            </div>
-          )}
-          {likedTracks.length === 0 ? (
-            <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
-              Pulsa el corazón en cualquier canción para guardarla en Favoritos.
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {likedTracks.map((track, idx) => (
-                <TrackRow
-                  key={track.id}
-                  track={track}
-                  index={idx}
-                  queue={likedTracks}
-                  onAddToPlaylist={onAddTrackToPlaylist}
-                  onRemove={() => removeLikedTrack(track.id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {subTab === 'podcasts' &&
-        (followedPodcasts.length === 0 ? (
-          <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
-            No sigues ningún podcast todavía. Descubre programas en la pestaña Podcasts.
+      {/* Recently Added (up to 20 covers) */}
+      <section>
+        <h2 className="text-lg font-bold text-[var(--text-primary)] mb-3.5">Recién añadido</h2>
+        {recentlyAdded.length === 0 ? (
+          <div className="py-14 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
+            Aquí aparecerán las carátulas de tus álbumes, playlists, podcasts y canciones recientes.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
-            {followedPodcasts.map((show) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+            {recentlyAdded.map((item) => (
               <div
-                key={show.id}
-                onClick={() => setSelectedPodcast(show)}
-                className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                key={item.key}
+                onClick={() => {
+                  if (item.playlist) {
+                    setSelectedPlaylistId(item.playlist.id);
+                    if (item.kind === 'album' && item.playlist.tracks.length > 0) {
+                      playTape(item.playlist, 0);
+                    }
+                  } else if (item.podcast) {
+                    setSelectedPodcast(item.podcast);
+                  } else if (item.track) {
+                    playTrack(item.track, likedTracks, false, undefined, 'songs-mini');
+                  }
+                }}
+                className="group p-2 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
               >
-                <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
-                  <img
-                    src={show.artwork}
-                    alt={show.title}
-                    className="w-full h-full object-cover"
-                  />
+                <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2">
+                  {item.artwork ? (
+                    <img
+                      src={item.artwork}
+                      alt={item.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+                      {item.kind === 'album' ? (
+                        <Disc3 className="w-8 h-8" />
+                      ) : item.kind === 'podcast' ? (
+                        <Podcast className="w-8 h-8" />
+                      ) : (
+                        <ListMusic className="w-8 h-8" />
+                      )}
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm font-bold text-[var(--text-primary)] truncate">
-                  {show.title}
+                <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                  {item.title}
                 </p>
-                <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{show.author}</p>
+                <p className="text-[11px] text-[var(--text-muted)] truncate mt-0.5">
+                  {item.subtitle}
+                </p>
               </div>
             ))}
           </div>
-        ))}
-
-      <ResumeTapeModal
-        isOpen={!!resumePrompt}
-        progress={resumePrompt?.progress || null}
-        onResume={() => {
-          if (resumePrompt) {
-            playTape(
-              resumePrompt.playlist,
-              resumePrompt.progress.trackIndex,
-              resumePrompt.progress.currentTime
-            );
-          }
-          setResumePrompt(null);
-        }}
-        onRestart={() => {
-          if (resumePrompt) {
-            tapeProgressService.clearProgress(resumePrompt.playlist.id);
-            playTape(resumePrompt.playlist, 0, 0);
-          }
-          setResumePrompt(null);
-        }}
-        onClose={() => setResumePrompt(null)}
-      />
+        )}
+      </section>
 
       <PodcastDetailModal
         show={selectedPodcast}

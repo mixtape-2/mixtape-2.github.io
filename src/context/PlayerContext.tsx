@@ -273,8 +273,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!isPlaying || !currentTrack) return;
     if (settings?.autoOpenPlayerDeck === false) return;
 
-    // Si estamos en la pestaña de favoritos o se está reproduciendo desde favoritos, NO mostrar ni cinta ni vinilo
-    if (activeNavigationTab === 'favorites' || playbackContext === 'favorites') {
+    // Si estamos en la pestaña de favoritos o se está reproduciendo desde favoritos o desde Canciones (solo minireproductor), NO abrir pantalla completa
+    if (
+      activeNavigationTab === 'favorites' ||
+      playbackContext === 'favorites' ||
+      playbackContext === 'songs-mini'
+    ) {
       return;
     }
 
