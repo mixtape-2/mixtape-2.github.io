@@ -306,20 +306,21 @@ class StreamResolver {
     return [];
   }
 
+  // Direct CORS-enabled companion nodes (bypass yt.chocolatemoo53.com 302 which lacks Access-Control-Allow-Origin)
   private readonly COMPANION_NODES = [
-    'https://yt.chocolatemoo53.com',
-    'https://inv.perditum.com',
-    'https://inv.nadeko.net',
-    'https://invidious.nerdvpn.de',
-    'https://yewtu.be',
+    'https://yt-comp1.chocolatemoo53.com',
+    'https://yt-comp2.chocolatemoo53.com',
+    'https://yt-comp3.chocolatemoo53.com',
+    'https://yt-comp4.chocolatemoo53.com',
+    'https://yt-comp5.chocolatemoo53.com',
   ];
 
   /**
-   * Direct dispatcher URL for a YouTube ID (itag 140 = M4A/AAC, itag 251 = WebM/Opus).
+   * Direct CORS-enabled companion stream URL for a YouTube ID (itag 140 = M4A/AAC, itag 251 = WebM/Opus).
    */
   getDirectStreamUrl(youtubeId: string, itag: 140 | 251 = 140, nodeOrigin?: string): string {
     const base = nodeOrigin || this.COMPANION_NODES[0];
-    return `${base}/latest_version?id=${youtubeId}&itag=${itag}&local=true`;
+    return `${base}/companion/latest_version?id=${youtubeId}&itag=${itag}&local=true`;
   }
 
   /**
@@ -397,12 +398,21 @@ class StreamResolver {
       typeof document !== 'undefined' &&
       !!document.createElement('audio').canPlayType('audio/webm; codecs="opus"');
 
+    // Pick 3 companion nodes in parallel (starting from a deterministic hash offset for load-balancing)
+    const offset = Math.abs(
+      youtubeId.split('').reduce((acc, ch) => ((acc << 5) - acc + ch.charCodeAt(0)) | 0, 0)
+    ) % this.COMPANION_NODES.length;
+
     const endpoints: string[] = [];
-    for (const node of this.COMPANION_NODES) {
+    for (let i = 0; i < 3; i++) {
+      const node = this.COMPANION_NODES[(offset + i) % this.COMPANION_NODES.length];
       if (excludeOrigin && node.includes(excludeOrigin)) continue;
       endpoints.push(this.getDirectStreamUrl(youtubeId, 140, node));
-      if (supportsOpus && node === this.COMPANION_NODES[0]) {
-        endpoints.push(this.getDirectStreamUrl(youtubeId, 251, node));
+    }
+    if (supportsOpus && endpoints.length > 0) {
+      const primaryNode = this.COMPANION_NODES[offset];
+      if (!excludeOrigin || !primaryNode.includes(excludeOrigin)) {
+        endpoints.push(this.getDirectStreamUrl(youtubeId, 251, primaryNode));
       }
     }
 
@@ -463,7 +473,10 @@ class StreamResolver {
       }
     }
 
-    // Return null when no companion node succeeded so Audius ad-free fallback can run cleanly
+    // Fallback directly to CORS-enabled companion endpoint for native <audio> playback (zero YouTube IFrame ads)
+    if (!excludeOrigin) {
+      return this.getDirectStreamUrl(youtubeId, 140, this.COMPANION_NODES[offset]);
+    }
     return null;
   }
 
