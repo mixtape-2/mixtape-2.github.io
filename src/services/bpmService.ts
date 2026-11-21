@@ -286,11 +286,13 @@ class BpmService {
   /**
    * Generates a complete rhythm-based playlist matching either an RPM preset (33⅓, 45, 78)
    * or a custom target BPM/RPM cadence (±12 BPM tolerance).
+   * Balances saved library tracks with fresh UNSAVED discovery tracks from YouTube + anthology.
    */
   public async generateRpmSession(
     preset: RpmPreset,
     targetBpm: number,
-    userTracks: Track[] = []
+    userTracks: Track[] = [],
+    mode: 'mixed' | 'discovery' = 'mixed'
   ): Promise<Track[]> {
     let minBpm: number;
     let maxBpm: number;
@@ -309,51 +311,127 @@ class BpmService {
       maxBpm = Math.min(190, targetBpm + 12);
     }
 
-    const poolMap = new Map<string, Track>();
+    const isMusicTrack = (t: Track) =>
+      t &&
+      t.source !== 'podcast' &&
+      t.source !== 'audiobook' &&
+      !t.id.startsWith('pod_') &&
+      !t.id.startsWith('ab_') &&
+      !t.id.startsWith('ytab_') &&
+      !t.showId &&
+      !t.audiobookId;
 
-    // 1. Add user tracks & Rock Anthology tracks annotated with BPM
-    for (const t of [...userTracks, ...ROCK_ANTHOLOGY]) {
-      if (!t.thumbnail || !t.thumbnail.trim()) continue;
-      const bpm = this.getTrackBpm(t);
-      if (bpm >= minBpm && bpm <= maxBpm && !poolMap.has(t.id)) {
-        poolMap.set(t.id, { ...t, bpm });
+    const cleanMusicUserTracks = userTracks.filter(isMusicTrack);
+    const savedIdSet = new Set<string>();
+    const savedTitleKeySet = new Set<string>();
+    const toTitleKey = (t: Track) =>
+      `${(t.title || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24)}`;
+
+    for (const t of cleanMusicUserTracks) {
+      savedIdSet.add(t.id);
+      if (t.youtubeId) savedIdSet.add(t.youtubeId);
+      savedTitleKeySet.add(toTitleKey(t));
+    }
+
+    const savedPool = new Map<string, Track>();
+    const discoveryPool = new Map<string, Track>();
+
+    // 1. Collect matching tracks from user's saved library (only if mixed mode)
+    if (mode === 'mixed') {
+      for (const t of cleanMusicUserTracks) {
+        if (!t.thumbnail || !t.thumbnail.trim()) continue;
+        const bpm = this.getTrackBpm(t);
+        if (bpm >= minBpm && bpm <= maxBpm && !savedPool.has(t.id)) {
+          savedPool.set(t.id, { ...t, bpm });
+        }
       }
     }
 
-    // 2. Also fetch fresh network tracks if custom or to enrich the mix
+    // 2. Fetch fresh UNSAVED tracks from YouTube (2 parallel queries for rich variety)
+    const zone = preset === 'custom' ? this.getRpmTier(targetBpm) : RPM_ZONES[preset];
+    const queries = [...zone.searchQueries].sort(() => Math.random() - 0.5).slice(0, 2);
+    // Add a personalized rhythm query using a random artist from user's library if available
+    if (cleanMusicUserTracks.length > 0) {
+      const sampleArtist =
+        cleanMusicUserTracks[Math.floor(Math.random() * cleanMusicUserTracks.length)]?.artist;
+      if (sampleArtist && sampleArtist.length > 2) {
+        const moodWord =
+          preset === '33' || targetBpm <= 95
+            ? 'ballad acoustic'
+            : preset === '78' || targetBpm >= 123
+            ? 'fast rock energetic'
+            : 'classic groove rock';
+        queries[1] = `${sampleArtist} similar bands ${moodWord}`;
+      }
+    }
+
     try {
-      const zone = preset === 'custom' ? this.getRpmTier(targetBpm) : RPM_ZONES[preset];
-      const randomQuery =
-        zone.searchQueries[Math.floor(Math.random() * zone.searchQueries.length)];
-      const networkResults = await streamResolver.search(randomQuery, 'youtube', 1);
-      for (const netTrack of networkResults.slice(0, 12)) {
-        if (!netTrack.thumbnail || poolMap.has(netTrack.id)) continue;
-        const estimated = this.getTrackBpm(netTrack);
-        // Clamp searched tracks into the requested zone if they came from a zone-specific query
-        const assignedBpm =
-          estimated >= minBpm && estimated <= maxBpm
-            ? estimated
-            : Math.round(minBpm + (this.hashString(netTrack.id) % Math.max(1, maxBpm - minBpm)));
-        poolMap.set(netTrack.id, { ...netTrack, bpm: assignedBpm });
+      const results = await Promise.allSettled(
+        queries.map((q) => streamResolver.search(q, 'youtube', 1))
+      );
+      for (const res of results) {
+        if (res.status !== 'fulfilled') continue;
+        for (const netTrack of res.value.slice(0, 14)) {
+          if (!isMusicTrack(netTrack) || !netTrack.thumbnail) continue;
+          const ytKey = netTrack.youtubeId || netTrack.id;
+          // Strictly keep UNSAVED tracks in discoveryPool
+          if (
+            savedIdSet.has(netTrack.id) ||
+            savedIdSet.has(ytKey) ||
+            savedTitleKeySet.has(toTitleKey(netTrack)) ||
+            discoveryPool.has(netTrack.id)
+          ) {
+            continue;
+          }
+          if (/\bpodcast\b|\baudiolibro\b/i.test(`${netTrack.title} ${netTrack.artist}`)) {
+            continue;
+          }
+          const estimated = this.getTrackBpm(netTrack);
+          const assignedBpm =
+            estimated >= minBpm && estimated <= maxBpm
+              ? estimated
+              : Math.round(minBpm + (this.hashString(netTrack.id) % Math.max(1, maxBpm - minBpm)));
+          discoveryPool.set(netTrack.id, { ...netTrack, bpm: assignedBpm });
+        }
       }
     } catch {
-      // Offline / anthology fallback already populated poolMap
+      // Network unavailable — fallback to unsaved Rock Anthology below
     }
 
-    const list = Array.from(poolMap.values());
-
-    // Sort by closeness to targetBpm when in 'custom' mode, or progressive tempo (in crescendo) for presets
-    if (preset === 'custom') {
-      list.sort(
-        (a, b) =>
-          Math.abs((a.bpm || targetBpm) - targetBpm) -
-          Math.abs((b.bpm || targetBpm) - targetBpm)
-      );
-    } else {
-      list.sort((a, b) => (a.bpm || 100) - (b.bpm || 100));
+    // 3. Supplement discoveryPool with UNSAVED tracks from ROCK_ANTHOLOGY
+    for (const t of ROCK_ANTHOLOGY) {
+      if (!t.thumbnail || savedIdSet.has(t.id) || discoveryPool.has(t.id)) continue;
+      const bpm = this.getTrackBpm(t);
+      if (bpm >= minBpm && bpm <= maxBpm) {
+        discoveryPool.set(t.id, { ...t, bpm });
+      }
     }
 
-    return list.slice(0, 24);
+    const sortTracks = (arr: Track[]) => {
+      if (preset === 'custom') {
+        arr.sort(
+          (a, b) =>
+            Math.abs((a.bpm || targetBpm) - targetBpm) -
+            Math.abs((b.bpm || targetBpm) - targetBpm)
+        );
+      } else {
+        arr.sort((a, b) => (a.bpm || 100) - (b.bpm || 100));
+      }
+      return arr;
+    };
+
+    const discoveryList = sortTracks(Array.from(discoveryPool.values()));
+    if (mode === 'discovery') {
+      return discoveryList.slice(0, 24);
+    }
+
+    // Balanced mix: cap saved tracks at 10 so at least ~14 tracks are fresh UNSAVED discoveries!
+    const savedList = Array.from(savedPool.values()).sort(() => Math.random() - 0.5);
+    const maxSaved = discoveryList.length >= 14 ? 10 : Math.max(10, 24 - discoveryList.length);
+    const pickedSaved = savedList.slice(0, maxSaved);
+    const pickedDiscovery = discoveryList.slice(0, Math.max(0, 24 - pickedSaved.length));
+
+    return sortTracks([...pickedSaved, ...pickedDiscovery]).slice(0, 24);
   }
 
   private hashString(str: string): number {

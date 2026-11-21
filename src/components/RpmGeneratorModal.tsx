@@ -17,11 +17,17 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
 
   const [preset, setPreset] = useState<RpmPreset>('45');
   const [customBpm, setCustomBpm] = useState<number>(118);
+  const [sourceMode, setSourceMode] = useState<'mixed' | 'discovery'>('mixed');
   const [isGenerating, setIsGenerating] = useState(false);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [savedNotice, setSavedNotice] = useState(false);
 
   if (!isOpen) return null;
+
+  const savedIds = new Set<string>([
+    ...likedTracks.map((t) => t.id),
+    ...playlists.flatMap((p) => p.tracks.map((t) => t.id)),
+  ]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -33,7 +39,7 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
       ];
       const targetBpm =
         preset === '33' ? 82 : preset === '45' ? 112 : preset === '78' ? 148 : customBpm;
-      const result = await bpmService.generateRpmSession(preset, targetBpm, userTracks);
+      const result = await bpmService.generateRpmSession(preset, targetBpm, userTracks, sourceMode);
       setTracks(result);
     } finally {
       setIsGenerating(false);
@@ -162,13 +168,39 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
             </div>
           </div>
 
+          {/* Source Mode Selector: Mixed vs Discovery Only */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setSourceMode('mixed')}
+              className={`py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                sourceMode === 'mixed'
+                  ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+              }`}
+            >
+              Biblioteca + Descubrimientos nuevos
+            </button>
+            <button
+              type="button"
+              onClick={() => setSourceMode('discovery')}
+              className={`py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                sourceMode === 'discovery'
+                  ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+              }`}
+            >
+              Solo canciones nuevas (no guardadas)
+            </button>
+          </div>
+
           {/* Generate CTA */}
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
               disabled={isGenerating}
               onClick={handleGenerate}
-              className="flex-1 min-w-[180px] flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl bg-[var(--theme-accent)] text-black font-bold text-sm hover:brightness-110 disabled:opacity-60 transition cursor-pointer"
+              className="flex-1 min-w-[180px] flex items-center justify-center gap-2 py-2.5 px-5 rounded-xl bg-[var(--theme-accent)] text-white font-bold text-sm hover:brightness-110 disabled:opacity-60 transition cursor-pointer"
             >
               {isGenerating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -203,8 +235,12 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
           {/* Generated Tracks Preview */}
           {tracks.length > 0 && (
             <div className="space-y-1 pt-2 border-t border-[var(--border-subtle)]">
-              <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-                Pistas seleccionadas ({tracks.length})
+              <div className="flex items-center justify-between text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2">
+                <span>Pistas seleccionadas ({tracks.length})</span>
+                <span className="font-mono-tech text-[11px] text-[var(--theme-accent)] normal-case">
+                  {tracks.filter((t) => !savedIds.has(t.id)).length} nuevas ·{' '}
+                  {tracks.filter((t) => savedIds.has(t.id)).length} de tu biblioteca
+                </span>
               </div>
               {tracks.map((track, idx) => (
                 <TrackRow

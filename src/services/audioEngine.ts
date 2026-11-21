@@ -85,6 +85,8 @@ class AudioEngine {
   private isAdActive: boolean = false;
   private strictAdFreeMode: boolean = true;
   private unlockedDecks = new WeakSet<HTMLAudioElement>();
+  private unlockingDecks = new WeakSet<HTMLAudioElement>();
+  private playRequestSeq: number = 0;
   private adBypassAttemptsForTrack: number = 0;
   private lastKnownSongTime: number = 0;
   private lastAdReloadAt: number = 0;
@@ -412,19 +414,28 @@ class AudioEngine {
     }
   }
 
+  private isDeckSilentPlaceholder(deck: HTMLAudioElement): boolean {
+    return (
+      this.unlockingDecks.has(deck) ||
+      (Boolean(this.silentBlobUrl) && deck.src === this.silentBlobUrl)
+    );
+  }
+
   private setupDeckListeners(deck: HTMLAudioElement, deckIdx: 0 | 1) {
     deck.addEventListener('play', () => {
+      if (this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex === deckIdx) {
         this.shouldBePlaying = true;
         this.notifyState();
       }
     });
     deck.addEventListener('pause', () => {
+      if (this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex === deckIdx) {
         // If the pause was triggered by OS backgrounding or screen lock transition while shouldBePlaying is true:
         if (typeof document !== 'undefined' && document.hidden && this.shouldBePlaying) {
           setTimeout(() => {
-            if (this.shouldBePlaying && deck.paused) {
+            if (this.shouldBePlaying && deck.paused && !this.isDeckSilentPlaceholder(deck)) {
               deck.play().catch(() => {});
             }
           }, 100);
@@ -435,21 +446,26 @@ class AudioEngine {
       }
     });
     deck.addEventListener('playing', () => {
+      if (this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex === deckIdx) {
         this.shouldBePlaying = true;
         this.notifyState();
       }
     });
     deck.addEventListener('waiting', () => {
+      if (this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex === deckIdx) this.notifyState();
     });
     deck.addEventListener('canplay', () => {
+      if (this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex === deckIdx && this.shouldBePlaying) this.notifyState();
     });
     deck.addEventListener('canplaythrough', () => {
+      if (this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex === deckIdx && this.shouldBePlaying) this.notifyState();
     });
     deck.addEventListener('ended', () => {
+      if (this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex !== deckIdx) {
         // Outgoing crossfading deck ended: clean it up quietly
         try {
@@ -466,7 +482,7 @@ class AudioEngine {
     });
 
     deck.addEventListener('timeupdate', () => {
-      if (this.isUsingYouTube) return;
+      if (this.isUsingYouTube || this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex !== deckIdx) return;
 
       if (this.shouldBePlaying && !deck.paused) {
@@ -869,6 +885,8 @@ class AudioEngine {
       if (!this.silentBlobUrl) {
         this.silentBlobUrl = URL.createObjectURL(generateSilentWavBlob());
       }
+      this.unlockingDecks.add(deck);
+      deck.loop = true;
       deck.muted = true;
       deck.volume = 0;
       deck.src = this.silentBlobUrl;
@@ -1027,6 +1045,7 @@ class AudioEngine {
    * Play a track (Full YouTube song or Full Audius stream)
    */
   public async playTrack(track: Track, isCrossfade: boolean = false, startTime?: number): Promise<boolean> {
+    const reqId = ++this.playRequestSeq;
     this.crossfadeTriggeredForCurrent = false;
     this.effectiveEndTriggeredForCurrent = false;
 
@@ -1040,6 +1059,7 @@ class AudioEngine {
       this.preloadedTrackId === track.id &&
       this.preloadedDeckIndex === otherIdx &&
       !!this.otherAudio.src &&
+      this.otherAudio.src !== this.silentBlobUrl &&
       (!startTime || startTime <= 0);
 
     // Clear preloaded markers now that we're consuming or replacing them
@@ -1052,14 +1072,15 @@ class AudioEngine {
         clearInterval(this.crossfadeInterval);
         this.crossfadeInterval = null;
       }
+      const prevDeck = this.audio;
       this.activeDeckIndex = otherIdx;
       if (!isCrossfade) {
-        if (outgoingDeck) {
-          outgoingDeck.pause();
-          outgoingDeck.src = '';
-        }
-        if (outgoingIsYouTube && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
-          this.ytPlayer.pauseVideo();
+        try {
+          prevDeck.pause();
+          prevDeck.src = '';
+        } catch {}
+        if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+          try { this.ytPlayer.pauseVideo(); } catch {}
         }
       }
     } else if (!isCrossfade) {
@@ -1067,16 +1088,17 @@ class AudioEngine {
         clearInterval(this.crossfadeInterval);
         this.crossfadeInterval = null;
       }
-      if (outgoingDeck) {
-        outgoingDeck.pause();
-        outgoingDeck.src = '';
+      // Unconditionally silence BOTH decks and YouTube iframe so an earlier track can NEVER keep playing in the background!
+      for (const d of [this.deckA, this.deckB]) {
+        try {
+          this.unlockingDecks.delete(d);
+          d.loop = false;
+          d.pause();
+          d.src = '';
+        } catch {}
       }
-      if (this.otherAudio) {
-        this.otherAudio.pause();
-        this.otherAudio.src = '';
-      }
-      if (outgoingIsYouTube && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
-        this.ytPlayer.pauseVideo();
+      if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+        try { this.ytPlayer.pauseVideo(); } catch {}
       }
     } else {
       // Crossfade active: switch to the alternate deck for the incoming track
@@ -1095,15 +1117,16 @@ class AudioEngine {
     // 1. YouTube playback (music or YouTube audiobooks): First attempt ad-free direct stream
     if ((track.source === 'youtube' || track.source === 'audiobook') && track.youtubeId) {
       const ytId = track.youtubeId;
+      const targetDeck = this.audio;
 
       // Synchronously unlock target <audio> element inside the user gesture BEFORE awaiting fetch()!
       if (!hasPreloadedHit) {
-        this.unlockAudioDeck(this.audio);
+        this.unlockAudioDeck(targetDeck);
       }
 
       try {
         const directAudioUrl = hasPreloadedHit
-          ? this.audio.src
+          ? targetDeck.src
           : await streamResolver.resolveDirectAudioStream(
               ytId,
               undefined,
@@ -1111,39 +1134,42 @@ class AudioEngine {
               track.artist
             );
 
-        // Guard against race conditions if user changed track while resolving
-        if (this.currentTrack?.youtubeId !== ytId) return true;
+        // Guard against race conditions if user changed track or stopped playback while resolving
+        if (reqId !== this.playRequestSeq || this.currentTrack?.youtubeId !== ytId) return true;
 
         if (directAudioUrl) {
           this.isUsingYouTube = false;
           this.releaseWakeLock();
           this.stopYouTubeSync();
           if (!isCrossfade && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
-            this.ytPlayer.pauseVideo();
+            try { this.ytPlayer.pauseVideo(); } catch {}
           }
 
+          this.unlockingDecks.delete(targetDeck);
+          targetDeck.loop = false;
           if (!hasPreloadedHit) {
-            this.audio.src = directAudioUrl;
+            targetDeck.src = directAudioUrl;
           }
-          this.audio.muted = false;
-          this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
-          this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
-          this.audio.playbackRate = this.playbackRate;
+          targetDeck.muted = false;
+          targetDeck.currentTime = startTime && startTime > 0 ? startTime : 0;
+          targetDeck.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
+          targetDeck.playbackRate = this.playbackRate;
 
           if (startTime && startTime > 0) {
             const seekTarget = startTime;
             const onLoaded = () => {
+              if (reqId !== this.playRequestSeq) return;
               try {
-                this.audio.currentTime = seekTarget;
+                targetDeck.currentTime = seekTarget;
               } catch {}
             };
-            this.audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+            targetDeck.addEventListener('loadedmetadata', onLoaded, { once: true });
           }
 
           let retryCount = 0;
           const onAudioError = async (e: any) => {
-            if (this.currentTrack?.youtubeId !== ytId) {
-              this.audio.removeEventListener('error', onAudioError);
+            if (reqId !== this.playRequestSeq || this.currentTrack?.youtubeId !== ytId) {
+              targetDeck.removeEventListener('error', onAudioError);
               return;
             }
 
@@ -1152,7 +1178,7 @@ class AudioEngine {
               try {
                 let failedHost: string | undefined;
                 try {
-                  failedHost = new URL(this.audio.src).hostname;
+                  failedHost = new URL(targetDeck.src).hostname;
                 } catch {}
 
                 streamResolver.invalidateStreamCache(ytId);
@@ -1164,15 +1190,22 @@ class AudioEngine {
                   track.artist
                 );
 
-                if (backupUrl && backupUrl !== this.audio.src && this.currentTrack?.youtubeId === ytId) {
-                  this.audio.src = backupUrl;
-                  this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
-                  this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
-                  this.audio.playbackRate = this.playbackRate;
-                  await this.audio.play();
-                  this.unlockedDecks.add(this.audio);
+                if (
+                  reqId === this.playRequestSeq &&
+                  backupUrl &&
+                  backupUrl !== targetDeck.src &&
+                  this.currentTrack?.youtubeId === ytId
+                ) {
+                  this.unlockingDecks.delete(targetDeck);
+                  targetDeck.loop = false;
+                  targetDeck.src = backupUrl;
+                  targetDeck.currentTime = startTime && startTime > 0 ? startTime : 0;
+                  targetDeck.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
+                  targetDeck.playbackRate = this.playbackRate;
+                  await targetDeck.play();
+                  this.unlockedDecks.add(targetDeck);
                   if (isCrossfade && (outgoingDeck || outgoingIsYouTube)) {
-                    this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, this.audio, false, this.crossfadeDuration);
+                    this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, targetDeck, false, this.crossfadeDuration);
                   }
                   this.notifyState();
                   return;
@@ -1182,7 +1215,9 @@ class AudioEngine {
               }
             }
 
-            this.audio.removeEventListener('error', onAudioError);
+            targetDeck.removeEventListener('error', onAudioError);
+            if (reqId !== this.playRequestSeq) return;
+
             if (this.strictAdFreeMode) {
               console.warn('Direct stream unavailable in Strict Ad-Free Mode (YouTube IFrame blocked):', e);
               this.notifyState();
@@ -1195,16 +1230,14 @@ class AudioEngine {
             console.warn('Direct stream error after retries, falling back to YouTube iframe:', e);
             this.fallbackToYouTubeIFrame(track, startTime);
           };
-          this.audio.addEventListener('error', onAudioError);
+          targetDeck.addEventListener('error', onAudioError);
 
           try {
-            await this.audio.play();
-            this.unlockedDecks.add(this.audio);
+            await targetDeck.play();
+            this.unlockedDecks.add(targetDeck);
           } catch (playErr: any) {
             const errName = playErr?.name || '';
-            // AbortError = user switched track quickly; NotAllowedError = mobile autoplay gesture expired.
-            // NEVER fall back to ad-bearing YouTube IFrame when we already have a verified ad-free stream!
-            if (errName === 'AbortError') {
+            if (errName === 'AbortError' || reqId !== this.playRequestSeq) {
               return true;
             }
             if (errName === 'NotAllowedError') {
@@ -1215,8 +1248,13 @@ class AudioEngine {
             throw playErr;
           }
 
+          if (reqId !== this.playRequestSeq) {
+            try { targetDeck.pause(); } catch {}
+            return true;
+          }
+
           if (isCrossfade && (outgoingDeck || outgoingIsYouTube)) {
-            this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, this.audio, false, this.crossfadeDuration);
+            this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, targetDeck, false, this.crossfadeDuration);
           }
           this.notifyState();
           return true;
@@ -1224,6 +1262,8 @@ class AudioEngine {
       } catch (err) {
         console.warn('Direct audio resolution error:', err);
       }
+
+      if (reqId !== this.playRequestSeq) return true;
 
       if (this.strictAdFreeMode) {
         this.notifyState();
@@ -1240,39 +1280,49 @@ class AudioEngine {
       return res;
     }
 
-    // 2. Direct Audius or custom audio stream
+    // 2. Direct Audius, podcast, archive audiobook or custom audio stream
     if (track.audioUrl) {
+      const targetDeck = this.audio;
       this.isUsingYouTube = false;
       this.releaseWakeLock();
       this.stopYouTubeSync();
       if (!isCrossfade && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
-        this.ytPlayer.pauseVideo();
+        try { this.ytPlayer.pauseVideo(); } catch {}
       }
 
       try {
+        this.unlockingDecks.delete(targetDeck);
+        targetDeck.loop = false;
         if (!hasPreloadedHit) {
-          this.audio.src = track.audioUrl;
+          targetDeck.src = track.audioUrl;
         }
-        this.audio.muted = false;
-        this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
-        this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
-        this.audio.playbackRate = this.playbackRate;
+        targetDeck.muted = false;
+        targetDeck.currentTime = startTime && startTime > 0 ? startTime : 0;
+        targetDeck.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
+        targetDeck.playbackRate = this.playbackRate;
         if (startTime && startTime > 0) {
           const seekTarget = startTime;
           const onLoaded = () => {
+            if (reqId !== this.playRequestSeq) return;
             try {
-              this.audio.currentTime = seekTarget;
+              targetDeck.currentTime = seekTarget;
             } catch {}
           };
-          this.audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+          targetDeck.addEventListener('loadedmetadata', onLoaded, { once: true });
         }
-        await this.audio.play();
+        await targetDeck.play();
+        if (reqId !== this.playRequestSeq) {
+          try { targetDeck.pause(); } catch {}
+          return true;
+        }
+        this.unlockedDecks.add(targetDeck);
         if (isCrossfade && (outgoingDeck || outgoingIsYouTube)) {
-          this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, this.audio, false, this.crossfadeDuration);
+          this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, targetDeck, false, this.crossfadeDuration);
         }
         this.notifyState();
         return true;
       } catch (err) {
+        if (reqId !== this.playRequestSeq) return true;
         console.warn('Native audio play error (user interaction required on iOS):', err);
       }
     }
@@ -1425,34 +1475,37 @@ class AudioEngine {
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
     }
-    if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+    if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
       try {
         this.ytPlayer.pauseVideo();
       } catch {}
-      return;
     }
-    this.audio.pause();
-    try {
-      this.otherAudio.pause();
-    } catch {}
+    try { this.deckA.pause(); } catch {}
+    try { this.deckB.pause(); } catch {}
   }
 
   public stop(): void {
+    this.playRequestSeq++;
     this.pause();
     if ('mediaSession' in navigator) {
       try {
         navigator.mediaSession.playbackState = 'none';
       } catch {}
     }
-    if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.stopVideo === 'function') {
+    if (this.ytPlayer && typeof this.ytPlayer.stopVideo === 'function') {
       try {
         this.ytPlayer.stopVideo();
       } catch {}
     }
-    try {
-      this.audio.currentTime = 0;
-      this.otherAudio.currentTime = 0;
-    } catch {}
+    for (const d of [this.deckA, this.deckB]) {
+      try {
+        this.unlockingDecks.delete(d);
+        d.loop = false;
+        d.pause();
+        d.src = '';
+        d.currentTime = 0;
+      } catch {}
+    }
     this.currentTrack = null;
     this.notifyState();
   }
@@ -1507,7 +1560,7 @@ class AudioEngine {
   }
 
   public setPlaybackRate(rate: number): void {
-    this.playbackRate = Math.max(0.75, Math.min(1.35, rate));
+    this.playbackRate = Math.max(0.75, Math.min(2.0, rate));
     try {
       this.audio.playbackRate = this.playbackRate;
       this.otherAudio.playbackRate = this.playbackRate;
@@ -1529,6 +1582,7 @@ class AudioEngine {
       const st = this.ytPlayer.getPlayerState();
       return st === 1 || (this.shouldBePlaying && (st === 3 || st === -1));
     }
+    if (this.isDeckSilentPlaceholder(this.audio)) return false;
     return !this.audio.paused && !this.audio.ended && this.shouldBePlaying;
   }
 
@@ -1536,6 +1590,7 @@ class AudioEngine {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') {
       return this.ytPlayer.getPlayerState() === 3; // 3 = buffering
     }
+    if (this.isDeckSilentPlaceholder(this.audio)) return this.shouldBePlaying;
     return !this.audio.paused && this.shouldBePlaying && this.audio.readyState < 2;
   }
 
@@ -1543,6 +1598,7 @@ class AudioEngine {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
       return this.ytPlayer.getCurrentTime() || 0;
     }
+    if (this.isDeckSilentPlaceholder(this.audio)) return 0;
     return this.audio.currentTime || 0;
   }
 
