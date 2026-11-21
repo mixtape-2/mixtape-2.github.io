@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Compass, Library, Podcast } from 'lucide-react';
+import { Home, Search, Library, Podcast } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: string;
@@ -9,7 +9,7 @@ interface BottomNavProps {
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab }) => {
   const tabs = [
     { id: 'home', label: 'Inicio', icon: Home },
-    { id: 'explore', label: 'Explorar', icon: Compass },
+    { id: 'explore', label: 'Buscar', icon: Search },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'podcasts', label: 'Podcasts', icon: Podcast },
   ];

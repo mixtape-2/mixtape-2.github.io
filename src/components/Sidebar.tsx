@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Home,
-  Compass,
+  Search,
   Library,
   Podcast,
   Heart,
@@ -56,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { id: 'home', label: 'Inicio', icon: Home },
-    { id: 'explore', label: 'Explorar', icon: Compass },
+    { id: 'explore', label: 'Buscar', icon: Search },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'podcasts', label: 'Podcasts', icon: Podcast },
   ];

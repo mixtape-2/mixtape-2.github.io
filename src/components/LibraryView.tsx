@@ -845,7 +845,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
         {savedAlbums.length === 0 ? (
           <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
-            Guarda álbumes desde Explorar para verlos aquí ordenados alfabéticamente.
+            Guarda álbumes desde Buscar para verlos aquí ordenados alfabéticamente.
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
