@@ -83,6 +83,8 @@ class AudioEngine {
   private playbackRate: number = 1.0;
   private syncTimer: any = null;
   private isAdActive: boolean = false;
+  private strictAdFreeMode: boolean = true;
+  private unlockedDecks = new WeakSet<HTMLAudioElement>();
   private adBypassAttemptsForTrack: number = 0;
   private lastKnownSongTime: number = 0;
   private lastAdReloadAt: number = 0;
@@ -746,10 +748,11 @@ class AudioEngine {
 
       const loadedId = videoData?.video_id || '';
       const idMismatch = Boolean(loadedId && expectedId && loadedId !== expectedId);
-      const shortAdDuration =
-        expectedDur > 80 && curDur > 0 && curDur <= 45 && Math.abs(curDur - expectedDur) > 10;
+      // Strict duration match: modern YouTube hides ad video_id/adState, so any mismatched duration (including 60s/90s ads) stays muted!
+      const durationMismatch =
+        expectedDur > 40 && curDur > 0 && Math.abs(curDur - expectedDur) > 10;
 
-      const isAd = adState === 1 || isAdPlaying === true || idMismatch || shortAdDuration;
+      const isAd = adState === 1 || isAdPlaying === true || idMismatch || durationMismatch;
 
       if (isAd) {
         this.handleAdDetected();
@@ -757,10 +760,11 @@ class AudioEngine {
           this.ytPlayer.seekTo(curDur + 1, true);
         }
       } else {
-        // Track confirmed as the real song: record timestamp and safely unmute if muted by ad guard
+        // Strict Mute-First confirmation: require positive curDur matching expected duration before ever unmuting
+        const durationConfirmed =
+          curDur > 0 && (expectedDur <= 40 || Math.abs(curDur - expectedDur) <= 10);
         const isConfirmedRealSong =
-          (!expectedId || !loadedId || loadedId === expectedId) &&
-          (curDur > 0 || curTime > 0);
+          (!expectedId || !loadedId || loadedId === expectedId) && durationConfirmed;
         if (isConfirmedRealSong) {
           if (curTime > 0) this.lastKnownSongTime = curTime;
           if (this.isAdActive) {
@@ -848,6 +852,37 @@ class AudioEngine {
 
   public setSkipSponsors(enabled: boolean) {
     this.skipSponsors = enabled;
+  }
+
+  public setStrictAdFreeMode(enabled: boolean) {
+    this.strictAdFreeMode = enabled;
+  }
+
+  /**
+   * Synchronously unlocks an HTMLAudioElement during the user's tap/click tick (t = 0ms),
+   * before any async await fetch(), so iOS Safari / Android Chrome keep autoplay permission
+   * even if stream resolution takes 2-8 seconds.
+   */
+  private unlockAudioDeck(deck: HTMLAudioElement) {
+    if (typeof window === 'undefined' || this.unlockedDecks.has(deck)) return;
+    try {
+      if (!this.silentBlobUrl) {
+        this.silentBlobUrl = URL.createObjectURL(generateSilentWavBlob());
+      }
+      deck.muted = true;
+      deck.volume = 0;
+      deck.src = this.silentBlobUrl;
+      const p = deck.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => {
+          this.unlockedDecks.add(deck);
+        }).catch(() => {});
+      } else {
+        this.unlockedDecks.add(deck);
+      }
+    } catch {
+      // Ignored
+    }
   }
 
   public setupMediaSession(actions: {
@@ -1061,6 +1096,11 @@ class AudioEngine {
     if ((track.source === 'youtube' || track.source === 'audiobook') && track.youtubeId) {
       const ytId = track.youtubeId;
 
+      // Synchronously unlock target <audio> element inside the user gesture BEFORE awaiting fetch()!
+      if (!hasPreloadedHit) {
+        this.unlockAudioDeck(this.audio);
+      }
+
       try {
         const directAudioUrl = hasPreloadedHit
           ? this.audio.src
@@ -1100,26 +1140,37 @@ class AudioEngine {
             this.audio.addEventListener('loadedmetadata', onLoaded, { once: true });
           }
 
-          let hasRetriedCompanion = false;
+          let retryCount = 0;
           const onAudioError = async (e: any) => {
-            this.audio.removeEventListener('error', onAudioError);
-            if (this.currentTrack?.youtubeId !== ytId) return;
+            if (this.currentTrack?.youtubeId !== ytId) {
+              this.audio.removeEventListener('error', onAudioError);
+              return;
+            }
 
-            if (!hasRetriedCompanion) {
-              hasRetriedCompanion = true;
+            if (retryCount < 2) {
+              retryCount++;
               try {
+                let failedHost: string | undefined;
+                try {
+                  failedHost = new URL(this.audio.src).hostname;
+                } catch {}
+
                 streamResolver.invalidateStreamCache(ytId);
-                // Only try WebM/Opus (itag 251) on browsers that actually support it (skip on iOS Safari!)
-                const supportsOpus = !!this.audio.canPlayType('audio/webm; codecs="opus"');
-                const backupUrl = supportsOpus
-                  ? streamResolver.getDirectStreamUrl(ytId, 251)
-                  : await streamResolver.resolveDirectAudioStream(ytId, 'chocolatemoo53', track.title, track.artist);
-                if (backupUrl && this.currentTrack?.youtubeId === ytId) {
+                // Rotate away from ONLY the exact failed companion host (keeps the other 4 healthy yt-comp nodes active!)
+                const backupUrl = await streamResolver.resolveDirectAudioStream(
+                  ytId,
+                  failedHost,
+                  track.title,
+                  track.artist
+                );
+
+                if (backupUrl && backupUrl !== this.audio.src && this.currentTrack?.youtubeId === ytId) {
                   this.audio.src = backupUrl;
                   this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
                   this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
                   this.audio.playbackRate = this.playbackRate;
                   await this.audio.play();
+                  this.unlockedDecks.add(this.audio);
                   if (isCrossfade && (outgoingDeck || outgoingIsYouTube)) {
                     this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, this.audio, false, this.crossfadeDuration);
                   }
@@ -1127,16 +1178,43 @@ class AudioEngine {
                   return;
                 }
               } catch {
-                // Proceed to YouTube IFrame fallback
+                // Continue to next retry or final handler
               }
             }
 
-            console.warn('Direct stream error after retry, falling back to YouTube iframe:', e);
+            this.audio.removeEventListener('error', onAudioError);
+            if (this.strictAdFreeMode) {
+              console.warn('Direct stream unavailable in Strict Ad-Free Mode (YouTube IFrame blocked):', e);
+              this.notifyState();
+              this.onErrorCallbacks.forEach((cb) =>
+                cb('No se pudo obtener un stream directo sin anuncios para esta pista. Pulsa de nuevo para reintentar.')
+              );
+              return;
+            }
+
+            console.warn('Direct stream error after retries, falling back to YouTube iframe:', e);
             this.fallbackToYouTubeIFrame(track, startTime);
           };
-          this.audio.addEventListener('error', onAudioError, { once: true });
+          this.audio.addEventListener('error', onAudioError);
 
-          await this.audio.play();
+          try {
+            await this.audio.play();
+            this.unlockedDecks.add(this.audio);
+          } catch (playErr: any) {
+            const errName = playErr?.name || '';
+            // AbortError = user switched track quickly; NotAllowedError = mobile autoplay gesture expired.
+            // NEVER fall back to ad-bearing YouTube IFrame when we already have a verified ad-free stream!
+            if (errName === 'AbortError') {
+              return true;
+            }
+            if (errName === 'NotAllowedError') {
+              console.warn('Audio play deferred by mobile autoplay policy (staying on ad-free direct stream):', playErr);
+              this.notifyState();
+              return false;
+            }
+            throw playErr;
+          }
+
           if (isCrossfade && (outgoingDeck || outgoingIsYouTube)) {
             this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, this.audio, false, this.crossfadeDuration);
           }
@@ -1144,7 +1222,15 @@ class AudioEngine {
           return true;
         }
       } catch (err) {
-        console.warn('Direct audio resolution error, falling back to YouTube iframe:', err);
+        console.warn('Direct audio resolution error:', err);
+      }
+
+      if (this.strictAdFreeMode) {
+        this.notifyState();
+        this.onErrorCallbacks.forEach((cb) =>
+          cb('Stream directo sin anuncios temporalmente ocupado. Inténtalo de nuevo en un instante.')
+        );
+        return false;
       }
 
       const res = this.fallbackToYouTubeIFrame(track, startTime);

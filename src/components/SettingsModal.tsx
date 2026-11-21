@@ -225,6 +225,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
               <div className="rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] px-4">
                 <ToggleRow
+                  label="Bloqueo estricto de anuncios"
+                  desc="Usa solo streams directos y Audius; nunca recurre al reproductor de YouTube con anuncios"
+                  checked={settings.strictAdFreeMode !== false}
+                  onChange={(v) => updateSettings({ strictAdFreeMode: v })}
+                />
+                <ToggleRow
                   label="Abrir reproductor automáticamente"
                   desc="Abre el reproductor a pantalla completa al empezar una canción"
                   checked={settings.autoOpenPlayerDeck !== false}

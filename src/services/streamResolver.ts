@@ -377,7 +377,7 @@ class StreamResolver {
     title?: string,
     artist?: string
   ): Promise<string | null> {
-    // 1. Resolve verified direct videoplayback URL from companion nodes (ad-free)
+    // 1. Resolve verified direct videoplayback URL via staggered 5-node companion race (100% ad-free)
     try {
       const companionUrl = await this.performCompanionStreamRace(youtubeId, excludeOrigin);
       if (companionUrl) return companionUrl;
@@ -385,8 +385,15 @@ class StreamResolver {
       // Ignored
     }
 
-    // 2. Fallback to Audius direct audio stream matching title and artist
-    return this.performAudiusFallback(title, artist);
+    // 2. Fallback to Audius direct audio stream matching title and artist (100% ad-free)
+    const audiusUrl = await this.performAudiusFallback(title, artist);
+    if (audiusUrl) return audiusUrl;
+
+    // 3. Final direct companion URL attempt (different node from excluded one) for native <audio> playback
+    const fallbackNode =
+      this.COMPANION_NODES.find((n) => !excludeOrigin || !n.includes(excludeOrigin)) ||
+      this.COMPANION_NODES[0];
+    return this.getDirectStreamUrl(youtubeId, 140, fallbackNode);
   }
 
   private async performCompanionStreamRace(
@@ -398,86 +405,111 @@ class StreamResolver {
       typeof document !== 'undefined' &&
       !!document.createElement('audio').canPlayType('audio/webm; codecs="opus"');
 
-    // Pick 3 companion nodes in parallel (starting from a deterministic hash offset for load-balancing)
-    const offset = Math.abs(
-      youtubeId.split('').reduce((acc, ch) => ((acc << 5) - acc + ch.charCodeAt(0)) | 0, 0)
-    ) % this.COMPANION_NODES.length;
+    // Deterministic starting offset for even load-balancing across all 5 companion nodes
+    const offset =
+      Math.abs(
+        youtubeId.split('').reduce((acc, ch) => ((acc << 5) - acc + ch.charCodeAt(0)) | 0, 0)
+      ) % this.COMPANION_NODES.length;
 
-    const endpoints: string[] = [];
-    for (let i = 0; i < 3; i++) {
+    const orderedNodes: string[] = [];
+    for (let i = 0; i < this.COMPANION_NODES.length; i++) {
       const node = this.COMPANION_NODES[(offset + i) % this.COMPANION_NODES.length];
       if (excludeOrigin && node.includes(excludeOrigin)) continue;
-      endpoints.push(this.getDirectStreamUrl(youtubeId, 140, node));
+      orderedNodes.push(node);
     }
-    if (supportsOpus && endpoints.length > 0) {
-      const primaryNode = this.COMPANION_NODES[offset];
-      if (!excludeOrigin || !primaryNode.includes(excludeOrigin)) {
-        endpoints.push(this.getDirectStreamUrl(youtubeId, 251, primaryNode));
-      }
+
+    if (orderedNodes.length === 0) return null;
+
+    const wave1Endpoints = orderedNodes
+      .slice(0, 2)
+      .map((node) => this.getDirectStreamUrl(youtubeId, 140, node));
+
+    const wave2Endpoints: string[] = orderedNodes
+      .slice(2)
+      .map((node) => this.getDirectStreamUrl(youtubeId, 140, node));
+    if (supportsOpus && orderedNodes.length > 0) {
+      wave2Endpoints.push(this.getDirectStreamUrl(youtubeId, 251, orderedNodes[0]));
     }
 
     const controllers: AbortController[] = [];
+    let settled = false;
+
+    const abortAll = () => {
+      for (const c of controllers) {
+        try {
+          c.abort();
+        } catch {}
+      }
+    };
+
+    const probeEndpoint = async (endpoint: string, delayMs: number): Promise<string> => {
+      if (delayMs > 0) {
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(() => {
+            if (settled) reject(new Error('Already resolved'));
+            else resolve();
+          }, delayMs);
+          if (settled) {
+            clearTimeout(timer);
+            reject(new Error('Already resolved'));
+          }
+        });
+      }
+
+      if (settled) throw new Error('Already resolved');
+
+      const controller = new AbortController();
+      controllers.push(controller);
+      const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+      try {
+        // Simple GET (zero custom headers -> zero CORS OPTIONS preflight) follows 302 to verified videoplayback URL
+        const res = await fetch(endpoint, {
+          method: 'GET',
+          redirect: 'follow',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        const contentType = (res.headers.get('content-type') || '').toLowerCase();
+        if (
+          res.ok &&
+          res.url &&
+          (contentType.includes('audio') ||
+            contentType.includes('mp4') ||
+            contentType.includes('webm') ||
+            contentType.includes('octet-stream'))
+        ) {
+          const verifiedUrl = res.url;
+          if (res.body) {
+            res.body.cancel().catch(() => {});
+          }
+          controller.abort();
+          return verifiedUrl;
+        }
+        throw new Error(`Invalid stream response (${res.status}) from ${endpoint}`);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+      }
+    };
 
     try {
-      const winningUrl = await Promise.any(
-        endpoints.map(async (endpoint) => {
-          const controller = new AbortController();
-          controllers.push(controller);
-          const timeoutId = setTimeout(() => controller.abort(), 4500);
+      // Staggered race: 2 nodes immediately; remaining 3 nodes + Opus kick in at 1800ms if wave 1 hasn't won yet
+      const allProbes = [
+        ...wave1Endpoints.map((ep) => probeEndpoint(ep, 0)),
+        ...wave2Endpoints.map((ep) => probeEndpoint(ep, 1800)),
+      ];
 
-          try {
-            // Simple GET (no custom headers -> no CORS preflight) follows 302s to the final videoplayback URL
-            const res = await fetch(endpoint, {
-              method: 'GET',
-              redirect: 'follow',
-              signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-
-            const contentType = (res.headers.get('content-type') || '').toLowerCase();
-            if (
-              res.ok &&
-              res.url &&
-              (contentType.includes('audio') ||
-                contentType.includes('mp4') ||
-                contentType.includes('webm') ||
-                contentType.includes('octet-stream'))
-            ) {
-              const verifiedUrl = res.url;
-              if (res.body) {
-                res.body.cancel().catch(() => {});
-              }
-              controller.abort();
-              return verifiedUrl;
-            }
-            throw new Error(`Invalid stream response (${res.status}) from ${endpoint}`);
-          } catch (err) {
-            clearTimeout(timeoutId);
-            throw err;
-          }
-        })
-      );
-
-      for (const c of controllers) {
-        try {
-          c.abort();
-        } catch {}
-      }
-
+      const winningUrl = await Promise.any(allProbes);
+      settled = true;
+      abortAll();
       return winningUrl;
     } catch {
-      for (const c of controllers) {
-        try {
-          c.abort();
-        } catch {}
-      }
+      settled = true;
+      abortAll();
+      return null;
     }
-
-    // Fallback directly to CORS-enabled companion endpoint for native <audio> playback (zero YouTube IFrame ads)
-    if (!excludeOrigin) {
-      return this.getDirectStreamUrl(youtubeId, 140, this.COMPANION_NODES[offset]);
-    }
-    return null;
   }
 
   private async performAudiusFallback(

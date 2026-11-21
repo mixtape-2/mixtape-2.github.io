@@ -101,6 +101,7 @@ export interface UserSettings {
   crossfadeEnabled?: boolean;
   crossfadeDuration?: number; // in seconds (e.g. 2 - 12)
   autoOpenPlayerDeck?: boolean; // Abrir automáticamente el dispositivo de reproducción (cinta o vinilo) a los 2 segundos
+  strictAdFreeMode?: boolean; // Bloqueo estricto: usa solo streams directos + Audius y nunca cae al YouTube IFrame con anuncios
   favoritesViewMode?: 'jukebox' | 'vinyl' | 'list';
   jukeboxCredits?: number;
   firebaseConfig?: {

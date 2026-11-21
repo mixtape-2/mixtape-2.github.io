@@ -71,6 +71,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   crossfadeEnabled: false,
   crossfadeDuration: 5,
   autoOpenPlayerDeck: true,
+  strictAdFreeMode: true,
 };
 
 const LibraryContext = createContext<LibraryContextType | null>(null);
@@ -137,6 +138,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (settings.skipSponsors !== undefined) {
       audioEngine.setSkipSponsors(settings.skipSponsors);
     }
+    audioEngine.setStrictAdFreeMode(settings.strictAdFreeMode !== false);
     audioEngine.setCrossfade(
       settings.crossfadeEnabled ?? false,
       settings.crossfadeDuration ?? 5
@@ -283,6 +285,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem('pulse_settings', JSON.stringify(updated));
       if (newSettings.skipSponsors !== undefined) {
         audioEngine.setSkipSponsors(newSettings.skipSponsors);
+      }
+      if (newSettings.strictAdFreeMode !== undefined) {
+        audioEngine.setStrictAdFreeMode(newSettings.strictAdFreeMode);
       }
       if (newSettings.crossfadeEnabled !== undefined || newSettings.crossfadeDuration !== undefined) {
         audioEngine.setCrossfade(
