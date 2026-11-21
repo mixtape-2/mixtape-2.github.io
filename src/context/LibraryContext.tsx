@@ -1,15 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import type { Playlist, PodcastShow, Track, UserSettings } from '../types/music';
+import type { AudiobookItem, Playlist, PodcastShow, Track, UserSettings } from '../types/music';
 import { firebaseService } from '../services/firebase';
 import { syncService, type SyncStateInfo } from '../services/syncService';
 import { audioEngine } from '../services/audioEngine';
 
 const FOLLOWED_PODCASTS_KEY = 'mixtape_followed_podcasts_v1';
+const SAVED_AUDIOBOOKS_KEY = 'mixtape_saved_audiobooks_v1';
 
 interface LibraryContextType {
   playlists: Playlist[];
   likedTracks: Track[];
   followedPodcasts: PodcastShow[];
+  savedAudiobooks: AudiobookItem[];
   settings: UserSettings;
   syncState: SyncStateInfo;
   createPlaylist: (
@@ -45,6 +47,8 @@ interface LibraryContextType {
   isLiked: (trackId: string) => boolean;
   isPodcastFollowed: (showId: string) => boolean;
   toggleFollowPodcast: (show: PodcastShow) => void;
+  isAudiobookSaved: (bookId: string) => boolean;
+  toggleSaveAudiobook: (book: AudiobookItem) => void;
   updateSettings: (newSettings: Partial<UserSettings>) => void;
   saveFirebaseCredentials: (config: any) => Promise<boolean>;
   linkSyncCode: (code: string) => Promise<{ success: boolean; error?: string }>;
@@ -576,12 +580,39 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const [savedAudiobooks, setSavedAudiobooks] = useState<AudiobookItem[]>(() => {
+    try {
+      const raw = localStorage.getItem(SAVED_AUDIOBOOKS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const isAudiobookSaved = (bookId: string): boolean => {
+    return savedAudiobooks.some((b) => b.id === bookId);
+  };
+
+  const toggleSaveAudiobook = (book: AudiobookItem) => {
+    setSavedAudiobooks((prev) => {
+      const exists = prev.some((b) => b.id === book.id);
+      const updated = exists
+        ? prev.filter((b) => b.id !== book.id)
+        : [{ ...book, savedAt: Date.now() }, ...prev];
+      try {
+        localStorage.setItem(SAVED_AUDIOBOOKS_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
   return (
     <LibraryContext.Provider
       value={{
         playlists,
         likedTracks,
         followedPodcasts,
+        savedAudiobooks,
         settings,
         syncState,
         createPlaylist,
@@ -599,6 +630,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isLiked,
         isPodcastFollowed,
         toggleFollowPodcast,
+        isAudiobookSaved,
+        toggleSaveAudiobook,
         updateSettings,
         saveFirebaseCredentials,
         linkSyncCode,

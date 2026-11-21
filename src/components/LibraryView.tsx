@@ -9,6 +9,7 @@ import {
   Disc3,
   Music,
   Podcast,
+  BookOpen,
   ArrowLeft,
   ChevronRight,
   Pencil,
@@ -18,7 +19,7 @@ import {
   Gauge,
   Clock,
 } from 'lucide-react';
-import type { Playlist, PodcastShow, Track } from '../types/music';
+import type { AudiobookItem, Playlist, PodcastShow, Track } from '../types/music';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { tapeProgressService, type TapeProgress } from '../services/tapeProgressService';
@@ -27,6 +28,7 @@ import { TrackRow, formatDuration } from './TrackRow';
 import { EditPlaylistModal } from './EditPlaylistModal';
 import { ResumeTapeModal } from './ResumeTapeModal';
 import { PodcastDetailModal } from './PodcastDetailModal';
+import { AudiobookDetailModal } from './AudiobookDetailModal';
 
 interface LibraryViewProps {
   selectedPlaylistId: string | null;
@@ -38,18 +40,26 @@ interface LibraryViewProps {
   onAddTrackToPlaylist: (track: Track) => void;
 }
 
-type LibrarySection = 'root' | 'playlists' | 'artists' | 'albums' | 'songs' | 'podcasts';
+type LibrarySection =
+  | 'root'
+  | 'playlists'
+  | 'artists'
+  | 'albums'
+  | 'songs'
+  | 'podcasts'
+  | 'audiobooks';
 type BpmFilter = 'all' | '33' | '45' | '78';
 
 interface RecentItem {
   key: string;
-  kind: 'playlist' | 'album' | 'podcast' | 'track';
+  kind: 'playlist' | 'album' | 'podcast' | 'audiobook' | 'track';
   title: string;
   subtitle: string;
   artwork?: string;
   timestamp: number;
   playlist?: Playlist;
   podcast?: PodcastShow;
+  audiobook?: AudiobookItem;
   track?: Track;
 }
 
@@ -73,6 +83,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     playlists,
     likedTracks,
     followedPodcasts,
+    savedAudiobooks,
     deletePlaylist,
     removeTrackFromPlaylist,
     reorderPlaylistTracks,
@@ -94,6 +105,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     progress: TapeProgress;
   } | null>(null);
   const [selectedPodcast, setSelectedPodcast] = useState<PodcastShow | null>(null);
+  const [selectedAudiobook, setSelectedAudiobook] = useState<AudiobookItem | null>(null);
 
   // Derived collections
   const userPlaylists = useMemo(
@@ -169,6 +181,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     [followedPodcasts]
   );
 
+  const audiobooksAlphabetical = useMemo(
+    () =>
+      savedAudiobooks
+        .slice()
+        .sort((a, b) => a.title.localeCompare(b.title, 'es', { sensitivity: 'base' })),
+    [savedAudiobooks]
+  );
+
   const recentlyAdded = useMemo<RecentItem[]>(() => {
     const items: RecentItem[] = [];
 
@@ -199,6 +219,18 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       });
     }
 
+    for (const book of savedAudiobooks) {
+      items.push({
+        key: `ab_${book.id}`,
+        kind: 'audiobook',
+        title: book.title,
+        subtitle: book.author || 'Audiolibro',
+        artwork: book.artwork,
+        timestamp: book.savedAt || 0,
+        audiobook: book,
+      });
+    }
+
     likedTracks.forEach((t, idx) => {
       items.push({
         key: `trk_${t.id}`,
@@ -213,7 +245,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
     items.sort((a, b) => b.timestamp - a.timestamp);
     return items.slice(0, 20);
-  }, [playlists, followedPodcasts, likedTracks]);
+  }, [playlists, followedPodcasts, savedAudiobooks, likedTracks]);
 
   const activePlaylist = useMemo(() => {
     if (isFavoritesView || selectedPlaylistId === 'favorites') return null;
@@ -1019,8 +1051,72 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     );
   }
 
+  // --- AUDIOBOOKS SCREEN (alphabetical vertical list) ---
+  if (section === 'audiobooks') {
+    return (
+      <div className="space-y-5 pb-8">
+        <div>
+          <button
+            type="button"
+            onClick={() => setSection('root')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--theme-accent)] hover:underline mb-2 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Biblioteca
+          </button>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+            Audiolibros
+          </h1>
+        </div>
+
+        {audiobooksAlphabetical.length === 0 ? (
+          <div className="py-16 text-center rounded-2xl border border-dashed border-[var(--border-strong)] text-sm text-[var(--text-muted)]">
+            No tienes audiolibros guardados todavía. Descubre títulos en la pestaña Audiolibros.
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] overflow-hidden">
+            {audiobooksAlphabetical.map((book) => (
+              <div
+                key={book.id}
+                onClick={() => setSelectedAudiobook(book)}
+                className="flex items-center gap-3.5 px-4 py-3 hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/30 flex items-center justify-center shrink-0">
+                  {book.artwork ? (
+                    <img
+                      src={book.artwork}
+                      alt={book.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <BookOpen className="w-5 h-5 text-[var(--text-muted)]" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[var(--text-primary)] truncate">
+                    {book.title}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">
+                    {book.author} · {book.provider === 'archive' ? 'Capítulos' : 'YouTube'}
+                  </p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <AudiobookDetailModal
+          book={selectedAudiobook}
+          onClose={() => setSelectedAudiobook(null)}
+        />
+      </div>
+    );
+  }
+
   // =========================================================================
-  // 3. LIBRARY ROOT VIEW (5 Sections at top + Recently Added covers below)
+  // 3. LIBRARY ROOT VIEW (6 Sections at top + Recently Added covers below)
   // =========================================================================
   const menuRows: {
     id: Exclude<LibrarySection, 'root'>;
@@ -1033,6 +1129,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     { id: 'albums', label: 'Álbumes', count: savedAlbums.length, icon: Disc3 },
     { id: 'songs', label: 'Canciones', count: allSongsAlphabetical.length, icon: Music },
     { id: 'podcasts', label: 'Podcasts', count: podcastsAlphabetical.length, icon: Podcast },
+    { id: 'audiobooks', label: 'Audiolibros', count: audiobooksAlphabetical.length, icon: BookOpen },
   ];
 
   return (
@@ -1119,6 +1216,8 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     }
                   } else if (item.podcast) {
                     setSelectedPodcast(item.podcast);
+                  } else if (item.audiobook) {
+                    setSelectedAudiobook(item.audiobook);
                   } else if (item.track) {
                     playTrack(item.track, likedTracks, false, undefined, 'songs-mini');
                   }
@@ -1161,6 +1260,11 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         show={selectedPodcast}
         onClose={() => setSelectedPodcast(null)}
         onAddTrackToPlaylist={onAddTrackToPlaylist}
+      />
+
+      <AudiobookDetailModal
+        book={selectedAudiobook}
+        onClose={() => setSelectedAudiobook(null)}
       />
     </div>
   );

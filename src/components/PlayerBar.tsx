@@ -423,7 +423,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onOpenAddToPlaylist }) => 
                 <input
                   type="range"
                   min={0.75}
-                  max={1.35}
+                  max={2.0}
                   step={0.05}
                   value={playbackRate}
                   onChange={(e) => setPlaybackRate(Number(e.target.value))}
@@ -432,7 +432,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onOpenAddToPlaylist }) => 
                 <div className="flex justify-between text-[10px] font-mono-tech text-[var(--text-muted)] mt-1">
                   <span>0.75x</span>
                   <span>1.00x</span>
-                  <span>1.35x</span>
+                  <span>2.00x</span>
                 </div>
               </div>
             )}

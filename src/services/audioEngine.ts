@@ -1057,8 +1057,8 @@ class AudioEngine {
       navigator.mediaSession.playbackState = 'playing';
     }
 
-    // 1. YouTube playback: First attempt ad-free direct stream (0ms resolution or instant preloaded deck)
-    if (track.source === 'youtube' && track.youtubeId) {
+    // 1. YouTube playback (music or YouTube audiobooks): First attempt ad-free direct stream
+    if ((track.source === 'youtube' || track.source === 'audiobook') && track.youtubeId) {
       const ytId = track.youtubeId;
 
       try {
@@ -1294,7 +1294,7 @@ class AudioEngine {
       }
     };
 
-    if (track.source === 'youtube' && track.youtubeId) {
+    if ((track.source === 'youtube' || track.source === 'audiobook') && track.youtubeId) {
       // Resolve the final verified ad-free videoplayback URL in background and buffer it in the inactive deck
       streamResolver
         .resolveDirectAudioStream(track.youtubeId, undefined, track.title, track.artist)

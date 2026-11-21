@@ -164,16 +164,24 @@ class RecommendationService {
 
   private isPodcastTrack(track: Track): boolean {
     if (!track) return false;
-    if (track.source === 'podcast' || track.id.startsWith('pod_') || Boolean(track.showId)) {
+    if (
+      track.source === 'podcast' ||
+      track.source === 'audiobook' ||
+      track.id.startsWith('pod_') ||
+      track.id.startsWith('ab_') ||
+      track.id.startsWith('ytab_') ||
+      Boolean(track.showId) ||
+      Boolean(track.audiobookId)
+    ) {
       return true;
     }
     const text = `${track.title || ''} ${track.artist || ''}`.toLowerCase();
-    return /\bpodcast\b/.test(text);
+    return /\bpodcast\b|\baudiolibro\b/.test(text);
   }
 
   private isPodcastQuery(query: string): boolean {
     const lower = (query || '').toLowerCase();
-    return /\bpodcast\b|\bepisodio\b|\bcap[ií]tulo\b/.test(lower);
+    return /\bpodcast\b|\baudiolibro\b|\bepisodio\b|\bcap[ií]tulo\b/.test(lower);
   }
 
   /**

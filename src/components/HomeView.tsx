@@ -74,7 +74,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
   })();
 
   const isMusicTrack = (t: Track) =>
-    t.source !== 'podcast' && !t.id.startsWith('pod_') && !t.showId;
+    t.source !== 'podcast' &&
+    t.source !== 'audiobook' &&
+    !t.id.startsWith('pod_') &&
+    !t.id.startsWith('ab_') &&
+    !t.id.startsWith('ytab_') &&
+    !t.showId &&
+    !t.audiobookId;
 
   useEffect(() => {
     const recent = playbackHistoryService.getRecentTracks(20).filter(isMusicTrack).slice(0, 10);

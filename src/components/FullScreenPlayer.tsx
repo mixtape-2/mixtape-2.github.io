@@ -484,13 +484,13 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             <input
               type="range"
               min={0.75}
-              max={1.35}
+              max={2.0}
               step={0.05}
               value={playbackRate}
               onChange={(e) => setPlaybackRate(Number(e.target.value))}
               className="flex-1 studio-slider"
             />
-            <span className="text-xs font-mono-tech text-white/70 shrink-0">1.35x</span>
+            <span className="text-xs font-mono-tech text-white/70 shrink-0">2.00x</span>
             <button
               type="button"
               onClick={() => setPlaybackRate(1)}

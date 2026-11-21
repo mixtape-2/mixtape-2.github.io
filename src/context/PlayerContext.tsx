@@ -5,6 +5,7 @@ import { lyricsService } from '../services/lyricsService';
 import { tapeProgressService } from '../services/tapeProgressService';
 import { playbackHistoryService } from '../services/playbackHistoryService';
 import { podcastService } from '../services/podcastService';
+import { audiobookService } from '../services/audiobookService';
 import { useLibrary } from './LibraryContext';
 
 export const SCRUB_SPEEDS = [1.5, 2, 4, 8] as const;
@@ -163,6 +164,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     if (track && track.source === 'podcast' && curTime >= 5) {
       podcastService.saveEpisodeProgress(track.id, curTime, dur);
+    }
+
+    if (track && (track.source === 'audiobook' || track.audiobookId) && curTime >= 5) {
+      audiobookService.saveProgress(track.id, curTime, dur, track.audiobookId || track.id, track.title);
     }
 
     if (tapeId && media === 'tape' && track) {
@@ -471,12 +476,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
 
-    // Auto-resume podcast episodes from saved timestamp if no explicit startTime was provided
+    // Auto-resume podcast episodes or audiobooks from saved timestamp if no explicit startTime was provided
     let effectiveStartTime = startTime;
     if (track.source === 'podcast' && (effectiveStartTime === undefined || effectiveStartTime <= 0)) {
       const savedEp = podcastService.getEpisodeProgress(track.id);
       if (savedEp && savedEp.currentTime > 5) {
         effectiveStartTime = savedEp.currentTime;
+      }
+    } else if (
+      (track.source === 'audiobook' || track.audiobookId) &&
+      (effectiveStartTime === undefined || effectiveStartTime <= 0)
+    ) {
+      const savedAb = audiobookService.getProgress(track.id);
+      if (savedAb && savedAb.currentTime > 5) {
+        effectiveStartTime = savedAb.currentTime;
       }
     }
 

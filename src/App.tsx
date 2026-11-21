@@ -25,6 +25,7 @@ import { HomeView } from './components/HomeView';
 import { ExploreView } from './components/ExploreView';
 import { LibraryView } from './components/LibraryView';
 import { PodcastsView } from './components/PodcastsView';
+import { AudiobooksView } from './components/AudiobooksView';
 import { KidsView } from './components/KidsView';
 import { PlaylistModal } from './components/PlaylistModal';
 import { RpmGeneratorModal } from './components/RpmGeneratorModal';
@@ -352,6 +353,8 @@ const AppContent: React.FC = () => {
                 {activeTab === 'podcasts' && (
                   <PodcastsView onAddTrackToPlaylist={handleOpenAddToPlaylist} />
                 )}
+
+                {activeTab === 'audiobooks' && <AudiobooksView />}
               </>
             )}
           </div>

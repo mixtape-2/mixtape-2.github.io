@@ -4,6 +4,7 @@ import {
   Search,
   Library,
   Podcast,
+  BookOpen,
   Heart,
   Plus,
   FileSpreadsheet,
@@ -59,6 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'explore', label: 'Buscar', icon: Search },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'podcasts', label: 'Podcasts', icon: Podcast },
+    { id: 'audiobooks', label: 'Audiolibros', icon: BookOpen },
   ];
 
   return (

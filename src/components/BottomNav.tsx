@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Search, Library, Podcast } from 'lucide-react';
+import { Home, Search, Library, Podcast, BookOpen } from 'lucide-react';
 
 interface BottomNavProps {
   activeTab: string;
@@ -12,11 +12,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, setActiveTab })
     { id: 'explore', label: 'Buscar', icon: Search },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'podcasts', label: 'Podcasts', icon: Podcast },
+    { id: 'audiobooks', label: 'Libros', icon: BookOpen },
   ];
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-sidebar)]/95 backdrop-blur-xl border-t border-[var(--border-subtle)] safe-bottom">
-      <div className="grid grid-cols-4 h-14">
+      <div className="grid grid-cols-5 h-14">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive =

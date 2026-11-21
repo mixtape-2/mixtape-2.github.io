@@ -1,4 +1,4 @@
-export type AudioSourceType = 'youtube' | 'audius' | 'radio' | 'podcast' | 'custom';
+export type AudioSourceType = 'youtube' | 'audius' | 'radio' | 'podcast' | 'audiobook' | 'custom';
 
 export interface PodcastShow {
   id: string;
@@ -9,6 +9,20 @@ export interface PodcastShow {
   trackCount?: number;
   feedUrl?: string;
   followedAt?: number;
+}
+
+export interface AudiobookItem {
+  id: string;
+  title: string;
+  author: string;
+  artwork: string;
+  provider: 'archive' | 'youtube';
+  duration?: number;
+  description?: string;
+  language?: string;
+  youtubeId?: string;
+  archiveId?: string;
+  savedAt?: number;
 }
 
 export interface Track {
@@ -29,6 +43,7 @@ export interface Track {
   releaseDate?: string;
   podcastDescription?: string;
   showId?: string;
+  audiobookId?: string;
 }
 
 export type MediaFormat = 'tape' | 'vinyl';
