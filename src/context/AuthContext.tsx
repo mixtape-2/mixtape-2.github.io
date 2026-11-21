@@ -143,6 +143,11 @@ interface AuthContextType {
   isAdminModalOpen: boolean;
   generatedLicenses: GeneratedLicenseRecord[];
   login: (username: string, password: string) => { success: boolean; error?: string };
+  importV1License: (
+    username: string,
+    password: string,
+    v1DeviceId: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   startFreeTrial: () => void;
   setLoginModalOpen: (open: boolean) => void;
@@ -459,6 +464,140 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [deviceId]
   );
 
+  const importV1License = useCallback(
+    async (
+      username: string,
+      password: string,
+      v1DeviceId: string
+    ): Promise<{ success: boolean; error?: string }> => {
+      const cleanUser = username.trim().toLowerCase();
+      const cleanPass = password.trim().toUpperCase();
+      const normV1Device = normalizeDeviceId(v1DeviceId);
+
+      if (!cleanUser || !cleanPass || !normV1Device) {
+        return {
+          success: false,
+          error: 'Introduce tu usuario, tu clave MX-... y el ID de equipo de Mixtape v1.',
+        };
+      }
+
+      if (!/^EQ-[0-9A-F]{4}-[0-9A-F]{4}$/.test(normV1Device)) {
+        return {
+          success: false,
+          error: 'El ID de equipo de v1 debe tener el formato EQ-XXXX-XXXX.',
+        };
+      }
+
+      const match = cleanPass.match(/^MX-([0-9A-F]{4})-([0-9A-F]{4})(?:-([0-9A-Z]{6}))?$/);
+      if (!match) {
+        return {
+          success: false,
+          error: 'El formato de la clave debe ser MX-XXXX-XXXX.',
+        };
+      }
+
+      const [, b1, b2, expPart] = match;
+      const expCode = expPart || '000000';
+      const expectedSig = sha256(
+        `MIXTAPE_LIC_V1::${cleanUser}::${normV1Device}::${expCode}::${LICENSE_SIGN_SECRET}`
+      )
+        .toUpperCase()
+        .slice(0, 8);
+
+      if (b1 + b2 !== expectedSig) {
+        return {
+          success: false,
+          error:
+            'La clave no coincide con ese usuario y ese ID de equipo de v1. Revisa los 3 datos del mensaje original.',
+        };
+      }
+
+      let expiresAt: number | null = null;
+      if (expCode !== '000000') {
+        const expiryHours = parseInt(expCode, 36);
+        if (isNaN(expiryHours)) {
+          return { success: false, error: 'Formato de expiración inválido.' };
+        }
+        expiresAt = expiryHours * 3600 * 1000;
+        if (Date.now() > expiresAt) {
+          return {
+            success: false,
+            error: 'Tu clave temporal de v1 ha caducado. Solicita una renovación al administrador.',
+          };
+        }
+      }
+
+      // Anti-sharing 1-device migration check via cloud relay (best-effort; allows same device to re-import)
+      const migrationTopic = `mixtape_v1mig_${sha256(
+        `MIXTAPE_MIGRATE_V1::${cleanUser}::${normV1Device}::${LICENSE_SIGN_SECRET}`
+      ).slice(0, 20)}`;
+      const relays = ['https://ntfy.tedomum.fr', 'https://ntfy.envs.net'];
+
+      let existingClaimer: string | null = null;
+      let activeRelay: string | null = null;
+
+      for (const relay of relays) {
+        try {
+          const res = await fetch(`${relay}/${migrationTopic}/json?poll=1&since=all`, {
+            signal: AbortSignal.timeout(4000),
+          });
+          if (!res.ok) continue;
+          activeRelay = relay;
+          const text = await res.text();
+          const lines = text.split('\n').filter((l) => l.trim().length > 0);
+          for (const line of lines) {
+            try {
+              const evt = JSON.parse(line);
+              if (evt?.event === 'message' && typeof evt.message === 'string') {
+                const payload = JSON.parse(evt.message);
+                if (payload?.claimedBy) {
+                  existingClaimer = String(payload.claimedBy);
+                  break;
+                }
+              }
+            } catch {}
+          }
+          break;
+        } catch {
+          // Try fallback relay
+        }
+      }
+
+      if (existingClaimer && existingClaimer !== deviceId) {
+        return {
+          success: false,
+          error:
+            'Esta clave de Mixtape v1 ya fue migrada a otro dispositivo. Cada clave solo puede importarse en 1 equipo.',
+        };
+      }
+
+      if (!existingClaimer && activeRelay) {
+        try {
+          await fetch(`${activeRelay}/${migrationTopic}`, {
+            method: 'POST',
+            body: JSON.stringify({ claimedBy: deviceId, at: Date.now() }),
+            signal: AbortSignal.timeout(3500),
+          });
+        } catch {
+          // Non-blocking
+        }
+      }
+
+      const userSession: AuthSession = {
+        username: username.trim(),
+        role: 'user',
+        deviceId,
+        expiresAt,
+        loginAt: Date.now(),
+      };
+      setSession(userSession);
+      localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(userSession));
+      setLoginModalOpen(false);
+      return { success: true };
+    },
+    [deviceId]
+  );
+
   const logout = useCallback(() => {
     setSession(null);
     localStorage.removeItem(STORAGE_KEYS.SESSION);
@@ -550,6 +689,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdminModalOpen,
         generatedLicenses,
         login,
+        importV1License,
         logout,
         startFreeTrial,
         setLoginModalOpen,

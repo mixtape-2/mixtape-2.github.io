@@ -11,6 +11,9 @@ import {
   Eye,
   EyeOff,
   Radio,
+  Smartphone,
+  ArrowRightLeft,
+  Loader2,
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -25,11 +28,15 @@ export const AccessGateModal: React.FC = () => {
     isLoginModalOpen,
     setLoginModalOpen,
     login,
+    importV1License,
     startFreeTrial,
   } = useAuth();
 
+  const [authTab, setAuthTab] = useState<'login' | 'migrate-v1'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [v1DeviceId, setV1DeviceId] = useState('');
+  const [isMigrating, setIsMigrating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedDevice, setCopiedDevice] = useState(false);
@@ -45,9 +52,26 @@ export const AccessGateModal: React.FC = () => {
     setTimeout(() => setCopiedDevice(false), 2200);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (authTab === 'migrate-v1') {
+      setIsMigrating(true);
+      try {
+        const res = await importV1License(username, password, v1DeviceId);
+        if (!res.success) {
+          setError(res.error || 'No se pudo validar la clave de Mixtape v1.');
+        } else {
+          setUsername('');
+          setPassword('');
+          setV1DeviceId('');
+        }
+      } finally {
+        setIsMigrating(false);
+      }
+      return;
+    }
+
     const res = login(username, password);
     if (!res.success) {
       setError(res.error || 'Error de autenticación');
@@ -101,49 +125,89 @@ export const AccessGateModal: React.FC = () => {
             </p>
           </div>
 
-          {/* Device Hardware ID Box (Anti-Sharing Lock) */}
-          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-3.5 space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[var(--text-secondary)] flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
-                ID único de este equipo
-              </span>
-              <span className="text-[10px] font-mono-tech font-semibold px-2 py-0.5 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border border-[var(--theme-badge-border)]">
-                1 usuario = 1 equipo
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="px-3 py-2 rounded-xl bg-[var(--bg-elevated)] font-mono-tech text-sm sm:text-base font-bold text-[var(--text-primary)] tracking-widest flex-1 text-center border border-[var(--border-strong)]">
-                {deviceId}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCopyDeviceId}
-                className="px-3 py-2 rounded-xl bg-[var(--theme-badge-bg)] hover:brightness-110 text-[var(--theme-accent)] border border-[var(--theme-badge-border)] text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer"
-                title="Copiar ID de equipo para solicitar acceso"
-              >
-                {copiedDevice ? (
-                  <>
-                    <Check className="w-4 h-4 text-emerald-400" />
-                    <span className="text-emerald-400">Copiado</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    <span>Copiar</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-              Envía este código al administrador para recibir tu contraseña personal. Las claves están ligadas a este ID y no funcionan en otros dispositivos.
-            </p>
+          {/* Mode Switcher: Standard v2 Login vs Migrate v1 Key */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthTab('login');
+                setError(null);
+              }}
+              className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                authTab === 'login'
+                  ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Acceso Mixtape 2</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthTab('migrate-v1');
+                setError(null);
+              }}
+              className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                authTab === 'migrate-v1'
+                  ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
+                  : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
+              }`}
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              <span>Migrar clave v1</span>
+            </button>
           </div>
 
-          {/* Login Form */}
+          {/* Device Hardware ID Box (shown in standard v2 login mode) */}
+          {authTab === 'login' ? (
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-[var(--text-secondary)] flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
+                  ID único de este equipo
+                </span>
+                <span className="text-[10px] font-mono-tech font-semibold px-2 py-0.5 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border border-[var(--theme-badge-border)]">
+                  1 usuario = 1 equipo
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="px-3 py-2 rounded-xl bg-[var(--bg-elevated)] font-mono-tech text-sm sm:text-base font-bold text-[var(--text-primary)] tracking-widest flex-1 text-center border border-[var(--border-strong)]">
+                  {deviceId}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCopyDeviceId}
+                  className="px-3 py-2 rounded-xl bg-[var(--theme-badge-bg)] hover:brightness-110 text-[var(--theme-accent)] border border-[var(--theme-badge-border)] text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer"
+                  title="Copiar ID de equipo para solicitar acceso"
+                >
+                  {copiedDevice ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span className="text-emerald-400">Copiado</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      <span>Copiar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                Envía este código al administrador para recibir tu contraseña personal. Las claves están ligadas a este ID y no funcionan en otros dispositivos.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-3.5 text-xs text-[var(--text-secondary)] leading-relaxed">
+              Introduce los <strong className="text-[var(--text-primary)]">3 datos de tu acceso de Mixtape v1</strong> (usuario, clave <span className="font-mono-tech text-[var(--text-primary)]">MX-…</span> e ID de equipo antiguo <span className="font-mono-tech text-[var(--text-primary)]">EQ-…</span>). Se validará automáticamente y quedará vinculada a este dispositivo <strong className="text-[var(--text-primary)]">(1 sola migración por clave)</strong>.
+            </div>
+          )}
+
+          {/* Login / Migration Form */}
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
               <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
@@ -162,9 +226,27 @@ export const AccessGateModal: React.FC = () => {
               </div>
             </div>
 
+            {authTab === 'migrate-v1' && (
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
+                  ID de equipo antiguo (Mixtape v1)
+                </label>
+                <div className="relative">
+                  <Smartphone className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={v1DeviceId}
+                    onChange={(e) => setV1DeviceId(e.target.value.toUpperCase())}
+                    placeholder="Ej: EQ-XXXX-XXXX"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-strong)] focus:border-[var(--theme-accent)] focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-mono-tech uppercase"
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
-                Contraseña / Clave de equipo
+                {authTab === 'migrate-v1' ? 'Contraseña de Mixtape v1' : 'Contraseña / Clave de equipo'}
               </label>
               <div className="relative">
                 <KeyRound className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -196,9 +278,19 @@ export const AccessGateModal: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-sm transition active:scale-[0.99] cursor-pointer"
+              disabled={isMigrating}
+              className="w-full py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-sm flex items-center justify-center gap-2 transition active:scale-[0.99] disabled:opacity-60 cursor-pointer"
             >
-              Desbloquear reproductor
+              {isMigrating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Validando y migrando clave...</span>
+                </>
+              ) : authTab === 'migrate-v1' ? (
+                <span>Validar e importar clave v1</span>
+              ) : (
+                <span>Desbloquear reproductor</span>
+              )}
             </button>
           </form>
 
