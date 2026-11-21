@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, ACCESS_GATE_ENABLED } from '../context/AuthContext';
 import { useKidsMode } from '../context/KidsModeContext';
 import { APP_VERSION } from '../version';
 
@@ -293,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </div>
           </div>
-        ) : (
+        ) : ACCESS_GATE_ENABLED ? (
           <button
             type="button"
             onClick={() => setLoginModalOpen(true)}
@@ -301,7 +301,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             Activar Licencia
           </button>
-        )}
+        ) : null}
       </div>
     </aside>
   );

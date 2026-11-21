@@ -98,6 +98,9 @@ const MASTER_ADMIN_HASH = '2fe7dd0cdaf8a1caea16103bdafb2f97c958568f44ebd34fd8940
 const MASTER_SALT = 'MIXTAPE_MASTER_SALT_84';
 const LICENSE_SIGN_SECRET = '80S_ANALOG_KEY_9941_TAPE_LOCK';
 
+// Interruptor temporal del sistema de claves (cambiar a true para volver a exigirlo al entrar)
+export const ACCESS_GATE_ENABLED = false;
+
 // 1-Hour Free Trial in milliseconds
 export const TRIAL_DURATION_MS = 60 * 60 * 1000;
 
@@ -355,9 +358,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ? Math.max(0, Math.ceil((TRIAL_DURATION_MS - trialElapsedMs) / 1000))
       : Math.floor(TRIAL_DURATION_MS / 1000);
 
-  const isTrialActive = !session && trialStartedAt !== null && trialRemainingSeconds > 0;
-  const isTrialExpired = !session && trialStartedAt !== null && trialRemainingSeconds <= 0;
-  const isAccessGranted = Boolean(session) || isTrialActive;
+  const isTrialActive =
+    ACCESS_GATE_ENABLED && !session && trialStartedAt !== null && trialRemainingSeconds > 0;
+  const isTrialExpired =
+    ACCESS_GATE_ENABLED && !session && trialStartedAt !== null && trialRemainingSeconds <= 0;
+  const isAccessGranted = !ACCESS_GATE_ENABLED || Boolean(session) || isTrialActive;
 
   // Pause audio immediately if trial expires or access is revoked
   useEffect(() => {
