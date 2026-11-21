@@ -350,7 +350,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               {title}
             </h1>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">{subtitle}</p>
-            <p className="text-xs font-mono-tech text-[var(--text-muted)] mt-2">
+            <p className="text-xs sm:text-sm font-mono-tech font-medium text-[var(--text-secondary)] mt-2">
               {rawTracks.length} pistas · {formatDuration(totalDuration)}
             </p>
 

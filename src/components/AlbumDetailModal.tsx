@@ -109,7 +109,7 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
           </div>
 
           <div className="flex-1 min-w-0 pr-8">
-            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] mb-1.5">
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-[var(--theme-badge-bg)] text-[var(--theme-badge-text)] mb-1.5">
               {release.type === 'ep' ? 'EP' : release.type === 'single' ? 'Single' : 'Álbum'}
               {release.year ? ` · ${release.year}` : ''}
             </span>

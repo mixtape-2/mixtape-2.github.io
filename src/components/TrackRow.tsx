@@ -287,7 +287,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
         )}
 
         {/* Duration */}
-        <span className="text-xs font-mono-tech text-[var(--text-muted)] w-11 text-right tabular-nums ml-1">
+        <span className="text-xs sm:text-sm font-mono-tech font-medium text-[var(--text-secondary)] min-w-[3.25rem] text-right tabular-nums ml-1.5">
           {formatDuration(track.duration)}
         </span>
       </div>

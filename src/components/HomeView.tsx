@@ -285,7 +285,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                           style={{ width: `${pct}%`, backgroundColor: 'var(--theme-accent)' }}
                         />
                       </div>
-                      <span className="text-[10px] font-mono-tech text-[var(--text-muted)]">
+                      <span className="text-xs font-mono-tech font-semibold text-[var(--text-secondary)]">
                         {formatDuration(progress.currentTime)}
                       </span>
                     </div>

@@ -224,8 +224,8 @@ export const AudiobooksView: React.FC = () => {
                     {book.provider === 'archive' ? 'Capítulos' : 'YouTube'}
                   </span>
                   {book.duration && book.duration > 0 ? (
-                    <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-mono-tech bg-black/80 text-[var(--text-secondary)] flex items-center gap-1">
-                      <Clock className="w-2.5 h-2.5" />
+                    <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full text-xs font-mono-tech font-semibold bg-black/85 text-[var(--text-primary)] flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
                       {formatDuration(book.duration)}
                     </span>
                   ) : null}

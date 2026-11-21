@@ -283,7 +283,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
                     </p>
                     <p className="text-xs text-white/60 truncate">{track.artist}</p>
                   </div>
-                  <span className="text-xs font-mono-tech text-white/50">
+                  <span className="text-xs sm:text-sm font-mono-tech font-medium text-zinc-200 tabular-nums">
                     {formatDuration(track.duration)}
                   </span>
                   {!isCurrent && (
@@ -330,7 +330,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               className="absolute inset-0 w-full opacity-0 cursor-pointer"
             />
           </div>
-          <div className="flex justify-between text-[11px] font-mono-tech text-white/60 mt-1">
+          <div className="flex justify-between text-xs sm:text-sm font-mono-tech font-semibold text-zinc-200 mt-1.5 tabular-nums">
             <span>{formatDuration(currentTime)}</span>
             {scrubDirection && scrubSpeed ? (
               <button

@@ -352,7 +352,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onOpenAddToPlaylist }) => 
 
           {/* Interactive Seekbar */}
           <div className="w-full flex items-center gap-2.5">
-            <span className="text-[11px] font-mono-tech text-[var(--text-muted)] w-10 text-right tabular-nums">
+            <span className="text-xs font-mono-tech font-semibold text-[var(--text-secondary)] w-12 text-right tabular-nums">
               {formatDuration(currentTime)}
             </span>
 
@@ -382,7 +382,7 @@ export const PlayerBar: React.FC<PlayerBarProps> = ({ onOpenAddToPlaylist }) => 
               />
             </div>
 
-            <span className="text-[11px] font-mono-tech text-[var(--text-muted)] w-10 tabular-nums">
+            <span className="text-xs font-mono-tech font-semibold text-[var(--text-secondary)] w-12 tabular-nums">
               {formatDuration(duration)}
             </span>
           </div>

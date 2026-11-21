@@ -142,7 +142,7 @@ export const QueueLyricsPanel: React.FC = () => {
                       </p>
                     </div>
 
-                    <span className="text-[10px] font-mono-tech text-[var(--text-muted)] shrink-0">
+                    <span className="text-xs font-mono-tech font-medium text-[var(--text-secondary)] shrink-0 tabular-nums">
                       {formatDuration(track.duration)}
                     </span>
 

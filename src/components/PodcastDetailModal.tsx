@@ -207,10 +207,10 @@ export const PodcastDetailModal: React.FC<PodcastDetailModalProps> = ({
                         </p>
                       )}
 
-                      <div className="flex items-center gap-3 mt-2 text-[11px] font-mono-tech text-[var(--text-muted)]">
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-xs sm:text-sm font-mono-tech font-medium text-[var(--text-secondary)]">
                         {dateLabel && <span>{dateLabel}</span>}
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
+                          <Clock className="w-3.5 h-3.5" />
                           {formatDuration(ep.duration)}
                         </span>
                         {prog && prog.currentTime > 5 && (

@@ -202,10 +202,10 @@ export const AudiobookDetailModal: React.FC<AudiobookDetailModalProps> = ({ book
                         {ch.title}
                       </p>
 
-                      <div className="flex items-center gap-3 mt-1 text-[11px] font-mono-tech text-[var(--text-muted)]">
+                      <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs sm:text-sm font-mono-tech font-medium text-[var(--text-secondary)]">
                         {ch.duration > 0 && (
                           <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
+                            <Clock className="w-3.5 h-3.5" />
                             {formatDuration(ch.duration)}
                           </span>
                         )}

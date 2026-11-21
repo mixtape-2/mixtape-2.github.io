@@ -24,10 +24,10 @@
   --border-subtle: rgba(255, 255, 255, 0.065);
   --border-strong: rgba(255, 255, 255, 0.13);
 
-  /* Layered Grey Typography */
-  --text-primary: #e5e5ea;
-  --text-secondary: #9898a3;
-  --text-muted: #63636e;
+  /* Layered Grey Typography (high-contrast legible greys) */
+  --text-primary: #ececf1;
+  --text-secondary: #b4b4c0;
+  --text-muted: #8a8a99;
 }
 
 /* Text size accessibility scaling */
