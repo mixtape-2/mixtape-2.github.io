@@ -73,8 +73,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
     return 'Buenas noches';
   })();
 
+  const isMusicTrack = (t: Track) =>
+    t.source !== 'podcast' && !t.id.startsWith('pod_') && !t.showId;
+
   useEffect(() => {
-    const recent = playbackHistoryService.getRecentTracks(10);
+    const recent = playbackHistoryService.getRecentTracks(20).filter(isMusicTrack).slice(0, 10);
     setRecentTracks(recent);
 
     const allProg = tapeProgressService.getAllProgress();
@@ -89,17 +92,42 @@ export const HomeView: React.FC<HomeViewProps> = ({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setCollections(recommendationService.getPersonalizedCollections(likedTracks, playlists));
 
-    const recent = playbackHistoryService.getRecentTracks(8);
+    const musicLiked = likedTracks.filter(isMusicTrack);
+    const musicPlaylists = playlists.map((pl) => ({
+      ...pl,
+      tracks: pl.tracks.filter(isMusicTrack),
+    }));
+    const recentMusic = playbackHistoryService.getRecentTracks(20).filter(isMusicTrack).slice(0, 8);
+
+    setCollections(recommendationService.getPersonalizedCollections(musicLiked, musicPlaylists));
+
     Promise.allSettled([
-      recommendationService.getDiscoveryForYouWindows(likedTracks, playlists, recent),
-      recommendationService.getPersonalizedChannels(likedTracks, playlists),
+      recommendationService.getDiscoveryForYouWindows(musicLiked, musicPlaylists, recentMusic),
+      recommendationService.getPersonalizedChannels(musicLiked, musicPlaylists),
     ])
       .then(([discRes, chanRes]) => {
         if (cancelled) return;
-        if (discRes.status === 'fulfilled') setDiscoveryWindows(discRes.value.slice(0, 3));
-        if (chanRes.status === 'fulfilled') setChannels(chanRes.value);
+        if (discRes.status === 'fulfilled') {
+          setDiscoveryWindows(
+            discRes.value
+              .map((w) => ({
+                ...w,
+                tracks: w.tracks.filter(
+                  (t) => isMusicTrack(t) && !/\bpodcast\b/i.test(`${t.title} ${t.artist}`)
+                ),
+              }))
+              .filter((w) => w.tracks.length > 0)
+              .slice(0, 3)
+          );
+        }
+        if (chanRes.status === 'fulfilled') {
+          setChannels(
+            chanRes.value.filter(
+              (t) => isMusicTrack(t) && !/\bpodcast\b/i.test(`${t.title} ${t.artist}`)
+            )
+          );
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

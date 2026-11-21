@@ -162,8 +162,22 @@ class RecommendationService {
     }
   }
 
+  private isPodcastTrack(track: Track): boolean {
+    if (!track) return false;
+    if (track.source === 'podcast' || track.id.startsWith('pod_') || Boolean(track.showId)) {
+      return true;
+    }
+    const text = `${track.title || ''} ${track.artist || ''}`.toLowerCase();
+    return /\bpodcast\b/.test(text);
+  }
+
+  private isPodcastQuery(query: string): boolean {
+    const lower = (query || '').toLowerCase();
+    return /\bpodcast\b|\bepisodio\b|\bcap[ií]tulo\b/.test(lower);
+  }
+
   /**
-   * Analyze user tastes and return weighted top artists & keywords
+   * Analyze user tastes and return weighted top artists & keywords (music only — strictly excludes podcasts)
    */
   analyzeTastes(
     likedTracks: Track[],
@@ -175,6 +189,7 @@ class RecommendationService {
 
     // 1. Liked tracks (weight 3)
     for (const track of likedTracks) {
+      if (this.isPodcastTrack(track)) continue;
       const artist = this.cleanArtistName(track.artist);
       if (artist) {
         scores[artist] = (scores[artist] || 0) + 3;
@@ -183,6 +198,7 @@ class RecommendationService {
 
     // 2. Recent plays (weight 3 - strong current listener intent)
     for (const track of recentTracks) {
+      if (this.isPodcastTrack(track)) continue;
       const artist = this.cleanArtistName(track.artist);
       if (artist) {
         scores[artist] = (scores[artist] || 0) + 3;
@@ -192,6 +208,7 @@ class RecommendationService {
     // 3. Playlist tracks (weight 2)
     for (const pl of playlists) {
       for (const track of pl.tracks) {
+        if (this.isPodcastTrack(track)) continue;
         const artist = this.cleanArtistName(track.artist);
         if (artist) {
           scores[artist] = (scores[artist] || 0) + 2;
@@ -202,10 +219,12 @@ class RecommendationService {
     // 4. Search history (weight 1)
     for (const query of searchHistory) {
       const term = query.trim();
-      if (term.length > 2) {
+      if (term.length > 2 && !this.isPodcastQuery(term)) {
         // Simple heuristic: query might be an artist
         const clean = this.cleanArtistName(term);
-        scores[clean] = (scores[clean] || 0) + 1;
+        if (clean) {
+          scores[clean] = (scores[clean] || 0) + 1;
+        }
       }
     }
 
