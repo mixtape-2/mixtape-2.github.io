@@ -312,7 +312,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
                 return (
                   <div
                     key={`${track.id}_${idx}`}
-                    onClick={() => playTrack(track, queue)}
+                    onClick={() => playTrack(track)}
                     className={`flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition ${
                       isCurrent
                         ? 'bg-white/15 border border-white/20'

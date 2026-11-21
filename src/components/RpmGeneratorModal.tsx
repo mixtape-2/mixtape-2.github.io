@@ -11,7 +11,8 @@ interface RpmGeneratorModalProps {
   onClose: () => void;
 }
 
-const LAST_RPM_SESSION_KEY = 'mixtape_last_rpm_session_v1';
+const LAST_RPM_SESSION_KEY = 'mixtape_last_rpm_session_v2';
+const LEGACY_RPM_SESSION_KEY = 'mixtape_last_rpm_session_v1';
 
 interface SavedRpmSessionDraft {
   preset: RpmPreset;
@@ -27,6 +28,7 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
 
   const initialDraft: SavedRpmSessionDraft | null = (() => {
     try {
+      localStorage.removeItem(LEGACY_RPM_SESSION_KEY);
       const raw = localStorage.getItem(LAST_RPM_SESSION_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch {
@@ -292,6 +294,7 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
                   track={track}
                   index={idx}
                   queue={tracks}
+                  onPlay={() => playTrack(track, tracks, false, 'tape', getSessionLabel())}
                   showBpm
                   compact
                 />

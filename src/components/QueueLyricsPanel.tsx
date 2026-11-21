@@ -194,7 +194,7 @@ export const QueueLyricsPanel: React.FC = () => {
                   return (
                     <div
                       key={`${track.id}_${idx}`}
-                      onClick={() => playTrack(track, queue)}
+                      onClick={() => playTrack(track)}
                       className={`group flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition cursor-pointer ${
                         isCurrent
                           ? 'bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)]'

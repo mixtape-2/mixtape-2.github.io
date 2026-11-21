@@ -28,7 +28,7 @@ export const RPM_ZONES: Record<'33' | '45' | '78', RpmZoneInfo> = {
     defaultBpm: 78,
     color: '#38bdf8',
     badgeClass: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
-    searchQueries: ['80s rock power ballads classics', 'classic rock slow ballads', 'chill acoustic rock classics'],
+    searchQueries: ['rock ballad official music video', 'acoustic classic rock song official', 'slow rock song official video'],
   },
   '45': {
     id: '45',
@@ -40,7 +40,7 @@ export const RPM_ZONES: Record<'33' | '45' | '78', RpmZoneInfo> = {
     defaultBpm: 112,
     color: '#f59e0b',
     badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-    searchQueries: ['80s rock groove hits', 'classic rock driving anthems', '80s pop rock upbeat'],
+    searchQueries: ['classic rock song official music video', 'rock en espanol official video', '80s rock anthem official video'],
   },
   '78': {
     id: '78',
@@ -52,7 +52,7 @@ export const RPM_ZONES: Record<'33' | '45' | '78', RpmZoneInfo> = {
     defaultBpm: 138,
     color: '#f43f5e',
     badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
-    searchQueries: ['80s workout rock hits fast', 'hard rock running anthems', 'upbeat 80s synthwave rock'],
+    searchQueries: ['hard rock fast song official music video', 'punk rock classic song official video', 'heavy metal classic official video'],
   },
 };
 
@@ -336,10 +336,14 @@ class BpmService {
     const savedPool = new Map<string, Track>();
     const discoveryPool = new Map<string, Track>();
 
-    // 1. Collect matching tracks from user's saved library (only if mixed mode)
+    // 1. Collect matching tracks from user's saved library (only if mixed mode, excluding long mixes/concerts)
     if (mode === 'mixed') {
       for (const t of cleanMusicUserTracks) {
         if (!t.thumbnail || !t.thumbnail.trim()) continue;
+        if (t.duration && t.duration > 600) continue;
+        if (/\b(full album|full concert|compilation|marathon|non-?stop|1 hour|2 hours|megamix|video mix|rock mix)\b/i.test(t.title || '')) {
+          continue;
+        }
         const bpm = this.getTrackBpm(t);
         if (bpm >= minBpm && bpm <= maxBpm && !savedPool.has(t.id)) {
           savedPool.set(t.id, { ...t, bpm });
@@ -365,14 +369,29 @@ class BpmService {
       }
     }
 
+    const isSingleMusicSong = (t: Track) => {
+      if (!isMusicTrack(t)) return false;
+      // Reject live streams (0s), short clips (< 1m30s), and long compilations/albums/concerts (> 9 min)
+      if (!t.duration || t.duration < 90 || t.duration > 540) return false;
+      const label = `${t.title || ''} ${t.artist || ''}`.toLowerCase();
+      if (
+        /\b(podcast|audiolibro|full album|full concert|compilation|marathon|non-?stop|playlist|1 hour|2 hours|top \d+|best of|megamix|mix \d{4}|video mix|rock mix|metal for gym|part i|part ii)\b/i.test(
+          label
+        )
+      ) {
+        return false;
+      }
+      return true;
+    };
+
     try {
       const results = await Promise.allSettled(
         queries.map((q) => streamResolver.search(q, 'youtube', 1))
       );
       for (const res of results) {
         if (res.status !== 'fulfilled') continue;
-        for (const netTrack of res.value.slice(0, 14)) {
-          if (!isMusicTrack(netTrack) || !netTrack.thumbnail) continue;
+        for (const netTrack of res.value.slice(0, 18)) {
+          if (!isSingleMusicSong(netTrack) || !netTrack.thumbnail) continue;
           const ytKey = netTrack.youtubeId || netTrack.id;
           // Strictly keep UNSAVED tracks in discoveryPool
           if (
@@ -381,9 +400,6 @@ class BpmService {
             savedTitleKeySet.has(toTitleKey(netTrack)) ||
             discoveryPool.has(netTrack.id)
           ) {
-            continue;
-          }
-          if (/\bpodcast\b|\baudiolibro\b/i.test(`${netTrack.title} ${netTrack.artist}`)) {
             continue;
           }
           const estimated = this.getTrackBpm(netTrack);
@@ -398,9 +414,11 @@ class BpmService {
       // Network unavailable — fallback to unsaved Rock Anthology below
     }
 
-    // 3. Supplement discoveryPool with UNSAVED tracks from ROCK_ANTHOLOGY
+    // 3. Supplement discoveryPool with UNSAVED single songs from ROCK_ANTHOLOGY (excludes long concerts)
     for (const t of ROCK_ANTHOLOGY) {
-      if (!t.thumbnail || savedIdSet.has(t.id) || discoveryPool.has(t.id)) continue;
+      if (!isSingleMusicSong(t) || !t.thumbnail || savedIdSet.has(t.id) || discoveryPool.has(t.id)) {
+        continue;
+      }
       const bpm = this.getTrackBpm(t);
       if (bpm >= minBpm && bpm <= maxBpm) {
         discoveryPool.set(t.id, { ...t, bpm });

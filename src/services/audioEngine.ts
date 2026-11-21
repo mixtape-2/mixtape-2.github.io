@@ -97,6 +97,8 @@ class AudioEngine {
   private silentBlobUrl: string | null = null;
   private preloadedTrackId: string | null = null;
   private preloadedDeckIndex: 0 | 1 | null = null;
+  private preloadedSrcUrl: string | null = null;
+  private preloadRequestSeq: number = 0;
   private wakeLock: any = null;
 
   // Real Web Audio API Analyser for stereo peak metering
@@ -421,6 +423,22 @@ class AudioEngine {
     );
   }
 
+  /**
+   * Truly clears an HTMLAudioElement without leaving `deck.src === window.location.href`
+   * (setting `deck.src = ''` resolves to the document URL in browsers, which is truthy).
+   */
+  private clearDeck(deck: HTMLAudioElement): void {
+    try {
+      this.unlockingDecks.delete(deck);
+      deck.loop = false;
+      deck.pause();
+      deck.removeAttribute('src');
+      deck.load();
+    } catch {
+      // Ignored
+    }
+  }
+
   private setupDeckListeners(deck: HTMLAudioElement, deckIdx: 0 | 1) {
     deck.addEventListener('play', () => {
       if (this.isDeckSilentPlaceholder(deck)) return;
@@ -468,10 +486,7 @@ class AudioEngine {
       if (this.isDeckSilentPlaceholder(deck)) return;
       if (this.activeDeckIndex !== deckIdx) {
         // Outgoing crossfading deck ended: clean it up quietly
-        try {
-          deck.pause();
-          deck.src = '';
-        } catch {}
+        this.clearDeck(deck);
         return;
       }
       this.shouldBePlaying = false;
@@ -1054,17 +1069,20 @@ class AudioEngine {
     const outgoingIsYouTube = this.isUsingYouTube && this.isPlaying();
     const otherIdx: 0 | 1 = this.activeDeckIndex === 0 ? 1 : 0;
 
-    // Check if the inactive deck (deckA/deckB) already has this exact track preloaded & buffered!
+    // Check if the inactive deck (deckA/deckB) ACTUALLY finished buffering this EXACT track & URL!
     const hasPreloadedHit =
       this.preloadedTrackId === track.id &&
       this.preloadedDeckIndex === otherIdx &&
-      !!this.otherAudio.src &&
+      Boolean(this.preloadedSrcUrl) &&
+      this.otherAudio.src === this.preloadedSrcUrl &&
       this.otherAudio.src !== this.silentBlobUrl &&
       (!startTime || startTime <= 0);
 
-    // Clear preloaded markers now that we're consuming or replacing them
+    // Cancel any in-flight background preload and clear markers now that we're consuming or replacing them
+    this.preloadRequestSeq++;
     this.preloadedTrackId = null;
     this.preloadedDeckIndex = null;
+    this.preloadedSrcUrl = null;
 
     if (hasPreloadedHit) {
       // Instant deck swap: promote the already-buffered deck to active!
@@ -1075,10 +1093,7 @@ class AudioEngine {
       const prevDeck = this.audio;
       this.activeDeckIndex = otherIdx;
       if (!isCrossfade) {
-        try {
-          prevDeck.pause();
-          prevDeck.src = '';
-        } catch {}
+        this.clearDeck(prevDeck);
         if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
           try { this.ytPlayer.pauseVideo(); } catch {}
         }
@@ -1089,14 +1104,8 @@ class AudioEngine {
         this.crossfadeInterval = null;
       }
       // Unconditionally silence BOTH decks and YouTube iframe so an earlier track can NEVER keep playing in the background!
-      for (const d of [this.deckA, this.deckB]) {
-        try {
-          this.unlockingDecks.delete(d);
-          d.loop = false;
-          d.pause();
-          d.src = '';
-        } catch {}
-      }
+      this.clearDeck(this.deckA);
+      this.clearDeck(this.deckB);
       if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
         try { this.ytPlayer.pauseVideo(); } catch {}
       }
@@ -1374,9 +1383,8 @@ class AudioEngine {
         this.crossfadeInterval = null;
 
         if (outgoingDeck) {
+          this.clearDeck(outgoingDeck);
           try {
-            outgoingDeck.pause();
-            outgoingDeck.src = '';
             outgoingDeck.volume = targetVolume;
           } catch {}
         }
@@ -1410,21 +1418,40 @@ class AudioEngine {
     if (!track || typeof window === 'undefined') return;
     if (this.crossfadeInterval) return; // Don't clobber outgoing deck during an active crossfade
     const otherIdx: 0 | 1 = this.activeDeckIndex === 0 ? 1 : 0;
-    if (this.preloadedTrackId === track.id && this.preloadedDeckIndex === otherIdx) return;
+    if (
+      this.preloadedTrackId === track.id &&
+      this.preloadedDeckIndex === otherIdx &&
+      Boolean(this.preloadedSrcUrl) &&
+      this.otherAudio.src === this.preloadedSrcUrl
+    ) {
+      return;
+    }
 
-    this.preloadedTrackId = track.id;
-    this.preloadedDeckIndex = otherIdx;
+    const preloadSeq = ++this.preloadRequestSeq;
+    // Clear preloaded markers & stale audio from inactive deck BEFORE async resolution
+    // so an unfinished preload can NEVER cause a stale track to play under the new track's title!
+    this.preloadedTrackId = null;
+    this.preloadedDeckIndex = null;
+    this.preloadedSrcUrl = null;
+    const inactiveDeck = otherIdx === 0 ? this.deckA : this.deckB;
+    if (inactiveDeck !== this.audio) {
+      this.clearDeck(inactiveDeck);
+    }
 
     const bufferInInactiveDeck = (url: string) => {
       try {
-        // Guard: ensure deck didn't swap while resolving
-        if (this.preloadedTrackId !== track.id || this.crossfadeInterval) return;
+        // Guard: ensure no newer playTrack/preload occurred and deck didn't swap while resolving
+        if (preloadSeq !== this.preloadRequestSeq || this.crossfadeInterval) return;
         const targetDeck = otherIdx === 0 ? this.deckA : this.deckB;
         if (targetDeck === this.audio) return;
         targetDeck.pause();
         targetDeck.preload = 'auto';
         targetDeck.src = url;
         targetDeck.load();
+        // Only mark as preloaded AFTER targetDeck.src is genuinely populated with this track's URL
+        this.preloadedTrackId = track.id;
+        this.preloadedDeckIndex = otherIdx;
+        this.preloadedSrcUrl = targetDeck.src;
       } catch {
         // Ignore background preload errors
       }
@@ -1435,7 +1462,7 @@ class AudioEngine {
       streamResolver
         .resolveDirectAudioStream(track.youtubeId, undefined, track.title, track.artist)
         .then((directUrl) => {
-          if (directUrl && this.preloadedTrackId === track.id) {
+          if (directUrl && preloadSeq === this.preloadRequestSeq) {
             bufferInInactiveDeck(directUrl);
           }
         })
@@ -1486,6 +1513,10 @@ class AudioEngine {
 
   public stop(): void {
     this.playRequestSeq++;
+    this.preloadRequestSeq++;
+    this.preloadedTrackId = null;
+    this.preloadedDeckIndex = null;
+    this.preloadedSrcUrl = null;
     this.pause();
     if ('mediaSession' in navigator) {
       try {
@@ -1497,15 +1528,8 @@ class AudioEngine {
         this.ytPlayer.stopVideo();
       } catch {}
     }
-    for (const d of [this.deckA, this.deckB]) {
-      try {
-        this.unlockingDecks.delete(d);
-        d.loop = false;
-        d.pause();
-        d.src = '';
-        d.currentTime = 0;
-      } catch {}
-    }
+    this.clearDeck(this.deckA);
+    this.clearDeck(this.deckB);
     this.currentTrack = null;
     this.notifyState();
   }
@@ -1515,10 +1539,9 @@ class AudioEngine {
       clearInterval(this.crossfadeInterval);
       this.crossfadeInterval = null;
     }
-    try {
-      this.otherAudio.pause();
-      this.otherAudio.src = '';
-    } catch {}
+    if (this.preloadedDeckIndex === null) {
+      this.clearDeck(this.otherAudio);
+    }
 
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.seekTo === 'function') {
       this.ytPlayer.seekTo(seconds, true);

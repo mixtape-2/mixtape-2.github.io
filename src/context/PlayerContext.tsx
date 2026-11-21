@@ -504,21 +504,28 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setDuration(initialDur);
     durationRef.current = initialDur;
 
-    // Fetch lyrics in background (skip for podcasts)
+    // Fetch lyrics in background (skip for podcasts; guard against stale async response after track change)
     if (track.source === 'podcast') {
       setLyrics([]);
     } else {
       lyricsService.getLyrics(track.title, track.artist, track.duration).then((lrc) => {
-        setLyrics(lrc);
+        if (currentTrackRef.current?.id === track.id) {
+          setLyrics(lrc);
+        }
       });
     }
 
     const success = await audioEngine.playTrack(track, isCrossfade, effectiveStartTime);
+    // Guard: if the user switched to another track while this one was resolving, do NOT clobber UI state or preload!
+    if (currentTrackRef.current?.id !== track.id) {
+      return;
+    }
     setIsLoading(false);
     setIsPlaying(success);
 
     if (success && effectiveStartTime && effectiveStartTime > 0) {
       setTimeout(() => {
+        if (currentTrackRef.current?.id !== track.id) return;
         audioEngine.seek(effectiveStartTime!);
         setCurrentTime(effectiveStartTime!);
         currentTimeRef.current = effectiveStartTime!;

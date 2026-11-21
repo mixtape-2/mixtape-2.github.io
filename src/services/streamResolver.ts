@@ -357,7 +357,8 @@ class StreamResolver {
 
     try {
       const resolvedUrl = await resolutionPromise;
-      if (resolvedUrl) {
+      // Only cache verified videoplayback URLs belonging to the exact YouTube video (never unverified fallback URLs)
+      if (resolvedUrl && resolvedUrl.includes('/videoplayback')) {
         this.streamCache.set(youtubeId, {
           url: resolvedUrl,
           expiresAt: Date.now() + 20 * 60 * 1000,
@@ -374,10 +375,10 @@ class StreamResolver {
   private async performStreamResolution(
     youtubeId: string,
     excludeOrigin?: string,
-    title?: string,
-    artist?: string
+    _title?: string,
+    _artist?: string
   ): Promise<string | null> {
-    // 1. Resolve verified direct videoplayback URL via staggered 5-node companion race (100% ad-free)
+    // 1. Resolve verified direct videoplayback URL via staggered 5-node companion race (exact youtubeId, 100% ad-free)
     try {
       const companionUrl = await this.performCompanionStreamRace(youtubeId, excludeOrigin);
       if (companionUrl) return companionUrl;
@@ -385,11 +386,7 @@ class StreamResolver {
       // Ignored
     }
 
-    // 2. Fallback to Audius direct audio stream matching title and artist (100% ad-free)
-    const audiusUrl = await this.performAudiusFallback(title, artist);
-    if (audiusUrl) return audiusUrl;
-
-    // 3. Final direct companion URL attempt (different node from excluded one) for native <audio> playback
+    // 2. Final direct companion URL for the EXACT youtubeId (never substitute an unrelated Audius track/remix)
     const fallbackNode =
       this.COMPANION_NODES.find((n) => !excludeOrigin || !n.includes(excludeOrigin)) ||
       this.COMPANION_NODES[0];
@@ -510,49 +507,6 @@ class StreamResolver {
       abortAll();
       return null;
     }
-  }
-
-  private async performAudiusFallback(
-    title?: string,
-    artist?: string
-  ): Promise<string | null> {
-    if (title) {
-      try {
-        const cleanTitle = title
-          .replace(/\(.*?\)|\[.*?\]|official|video|audio|lyric|remastered|hd|4k/gi, '')
-          .trim();
-        const cleanArtist = (artist || '')
-          .replace(/\(.*?\)|\[.*?\]/gi, '')
-          .trim();
-
-        const queries = [
-          `${cleanArtist} ${cleanTitle}`.trim(),
-          cleanTitle,
-        ];
-
-        for (const q of queries) {
-          if (!q || q.length < 3) continue;
-          const audiusEndpoint = `https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(
-            q
-          )}&app_name=mixtape_music&limit=5`;
-          const res = await fetch(audiusEndpoint, { signal: AbortSignal.timeout(2500) });
-          if (res.ok) {
-            const data = await res.json();
-            const items = data.data || [];
-            const streamable = items.find(
-              (item: any) => item.is_streamable !== false && !item.is_delete && item.id
-            );
-            if (streamable) {
-              return `https://discoveryprovider.audius.co/v1/tracks/${streamable.id}/stream?app_name=mixtape_music`;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Audius native audio resolution fallback error:', err);
-      }
-    }
-
-    return null;
   }
 
   /**
