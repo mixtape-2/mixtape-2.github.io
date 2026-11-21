@@ -11,15 +11,36 @@ interface RpmGeneratorModalProps {
   onClose: () => void;
 }
 
+const LAST_RPM_SESSION_KEY = 'mixtape_last_rpm_session_v1';
+
+interface SavedRpmSessionDraft {
+  preset: RpmPreset;
+  customBpm: number;
+  sourceMode: 'mixed' | 'discovery';
+  label: string;
+  tracks: Track[];
+}
+
 export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, onClose }) => {
   const { playlists, likedTracks, createPlaylist } = useLibrary();
-  const { playTrack } = usePlayer();
+  const { playTrack, setQueueOpen } = usePlayer();
 
-  const [preset, setPreset] = useState<RpmPreset>('45');
-  const [customBpm, setCustomBpm] = useState<number>(118);
-  const [sourceMode, setSourceMode] = useState<'mixed' | 'discovery'>('mixed');
+  const initialDraft: SavedRpmSessionDraft | null = (() => {
+    try {
+      const raw = localStorage.getItem(LAST_RPM_SESSION_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const [preset, setPreset] = useState<RpmPreset>(initialDraft?.preset || '45');
+  const [customBpm, setCustomBpm] = useState<number>(initialDraft?.customBpm || 118);
+  const [sourceMode, setSourceMode] = useState<'mixed' | 'discovery'>(
+    initialDraft?.sourceMode || 'mixed'
+  );
   const [isGenerating, setIsGenerating] = useState(false);
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [tracks, setTracks] = useState<Track[]>(initialDraft?.tracks || []);
   const [savedNotice, setSavedNotice] = useState(false);
 
   if (!isOpen) return null;
@@ -28,6 +49,11 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
     ...likedTracks.map((t) => t.id),
     ...playlists.flatMap((p) => p.tracks.map((t) => t.id)),
   ]);
+
+  const getSessionLabel = (p: RpmPreset = preset, bpm: number = customBpm) =>
+    p === 'custom'
+      ? `Sesión ${bpm} BPM`
+      : `Sesión ${RPM_ZONES[p].rpmLabel} (${RPM_ZONES[p].title})`;
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -41,6 +67,16 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
         preset === '33' ? 82 : preset === '45' ? 112 : preset === '78' ? 148 : customBpm;
       const result = await bpmService.generateRpmSession(preset, targetBpm, userTracks, sourceMode);
       setTracks(result);
+      try {
+        const draft: SavedRpmSessionDraft = {
+          preset,
+          customBpm,
+          sourceMode,
+          label: getSessionLabel(preset, customBpm),
+          tracks: result,
+        };
+        localStorage.setItem(LAST_RPM_SESSION_KEY, JSON.stringify(draft));
+      } catch {}
     } finally {
       setIsGenerating(false);
     }
@@ -48,17 +84,25 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
 
   const handlePlayAll = () => {
     if (tracks.length === 0) return;
-    playTrack(tracks[0], tracks);
+    playTrack(tracks[0], tracks, false, 'tape', getSessionLabel());
+    // Open the Queue panel on desktop so the user can always inspect or save the active rhythm list
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      setQueueOpen(true);
+    }
     onClose();
   };
 
   const handleSaveAsPlaylist = () => {
     if (tracks.length === 0) return;
-    const label =
-      preset === 'custom'
-        ? `Sesión ${customBpm} BPM`
-        : `Sesión ${RPM_ZONES[preset].rpmLabel} (${RPM_ZONES[preset].title})`;
-    createPlaylist(label, 'Generada automáticamente por ritmo BPM/RPM', tracks[0]?.thumbnail, 'tape', undefined, undefined, tracks);
+    createPlaylist(
+      getSessionLabel(),
+      'Generada automáticamente por ritmo BPM/RPM',
+      tracks[0]?.thumbnail,
+      'tape',
+      undefined,
+      undefined,
+      tracks
+    );
     setSavedNotice(true);
   };
 

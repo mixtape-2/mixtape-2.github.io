@@ -21,6 +21,8 @@ import {
   Loader2,
   Music,
   Trash2,
+  Save,
+  Check,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
@@ -49,6 +51,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     lyrics,
     activeLyricIndex,
     isFullScreenPlayerOpen,
+    playbackContext,
     setFullScreenPlayerOpen,
     togglePlay,
     stopPlayback,
@@ -66,9 +69,10 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     removeFromQueue,
   } = usePlayer();
 
-  const { isLiked, toggleLike } = useLibrary();
+  const { isLiked, toggleLike, createPlaylist } = useLibrary();
   const [subView, setSubView] = useState<'player' | 'lyrics' | 'queue'>('player');
   const [showPitch, setShowPitch] = useState(false);
+  const [queueSavedNotice, setQueueSavedNotice] = useState(false);
   const activeLyricRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -255,52 +259,100 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         )}
 
         {subView === 'queue' && (
-          <div className="w-full h-full overflow-y-auto py-2 space-y-1.5 no-scrollbar">
-            {queue.map((track, idx) => {
-              const isCurrent = idx === queueIndex;
-              return (
-                <div
-                  key={`${track.id}_${idx}`}
-                  onClick={() => playTrack(track, queue)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition ${
-                    isCurrent
-                      ? 'bg-white/15 border border-white/20'
-                      : 'hover:bg-white/10 border border-transparent'
-                  }`}
+          <div className="w-full h-full flex flex-col min-h-0">
+            {queue.length > 0 && (
+              <div className="flex items-center justify-between gap-2 pb-3 mb-2 border-b border-white/10 shrink-0">
+                <span className="text-xs font-semibold text-white/70 truncate">
+                  {playbackContext && playbackContext !== 'songs-mini' && playbackContext !== 'favorites'
+                    ? playbackContext
+                    : `Cola actual (${queue.length} pistas)`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const name =
+                      playbackContext && playbackContext !== 'songs-mini' && playbackContext !== 'favorites'
+                        ? playbackContext
+                        : `Cola guardada (${new Date().toLocaleDateString('es-ES', {
+                            day: '2-digit',
+                            month: 'short',
+                          })})`;
+                    createPlaylist(
+                      name,
+                      `Lista guardada desde la cola (${queue.length} pistas)`,
+                      queue[0]?.thumbnail,
+                      'tape',
+                      undefined,
+                      undefined,
+                      queue
+                    );
+                    setQueueSavedNotice(true);
+                    setTimeout(() => setQueueSavedNotice(false), 3000);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] text-[var(--theme-badge-text)] text-xs font-bold hover:brightness-110 transition shrink-0 cursor-pointer"
                 >
-                  <img
-                    src={track.thumbnail}
-                    alt={track.title}
-                    className="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-sm font-semibold truncate ${
-                        isCurrent ? 'text-amber-300' : 'text-white'
-                      }`}
-                    >
-                      {track.title}
-                    </p>
-                    <p className="text-xs text-white/60 truncate">{track.artist}</p>
-                  </div>
-                  <span className="text-xs sm:text-sm font-mono-tech font-medium text-zinc-200 tabular-nums">
-                    {formatDuration(track.duration)}
-                  </span>
-                  {!isCurrent && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFromQueue(idx);
-                      }}
-                      className="p-1.5 rounded-lg text-white/40 hover:text-rose-400 transition cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  {queueSavedNotice ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Guardada en Playlists
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      Guardar como playlist
+                    </>
                   )}
-                </div>
-              );
-            })}
+                </button>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto py-1 space-y-1.5 no-scrollbar">
+              {queue.map((track, idx) => {
+                const isCurrent = idx === queueIndex;
+                return (
+                  <div
+                    key={`${track.id}_${idx}`}
+                    onClick={() => playTrack(track, queue)}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition ${
+                      isCurrent
+                        ? 'bg-white/15 border border-white/20'
+                        : 'hover:bg-white/10 border border-transparent'
+                    }`}
+                  >
+                    <img
+                      src={track.thumbnail}
+                      alt={track.title}
+                      className="w-10 h-10 rounded-lg object-cover bg-zinc-800 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-semibold truncate ${
+                          isCurrent ? 'text-[var(--theme-accent)]' : 'text-white'
+                        }`}
+                      >
+                        {track.title}
+                      </p>
+                      <p className="text-xs text-white/60 truncate">{track.artist}</p>
+                    </div>
+                    <span className="text-xs sm:text-sm font-mono-tech font-medium text-zinc-200 tabular-nums">
+                      {formatDuration(track.duration)}
+                    </span>
+                    {!isCurrent && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFromQueue(idx);
+                        }}
+                        className="p-1.5 rounded-lg text-white/40 hover:text-[var(--theme-accent)] transition cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
