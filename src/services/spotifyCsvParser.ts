@@ -291,14 +291,14 @@ export function parseSpotifyCsv(content: string, fileName?: string): CsvParseRes
     }
   }
 
-  // Derive suggested playlist name from filename or date
-  let suggestedName = 'Mixtape Spotify';
+  // Derive suggested playlist name from filename
+  let suggestedName = 'Playlist Importada';
   if (fileName) {
     const clean = fileName
       .replace(/\.(csv|txt)$/i, '')
       .replace(/[_-]+/g, ' ')
       .trim();
-    if (clean) suggestedName = `Cinta: ${clean}`;
+    if (clean) suggestedName = clean;
   }
 
   return {

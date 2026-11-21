@@ -1,5 +1,5 @@
-export const APP_VERSION = '3.12.0';
-export const APP_BUILD = '2026.11.21.15';
+export const APP_VERSION = '3.12.1';
+export const APP_BUILD = '2026.11.21.16';
 export const APP_RELEASE_NAME = 'Mixtape 2 Studio';
 
 /**
