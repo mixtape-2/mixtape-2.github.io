@@ -22,20 +22,22 @@ export const KidsView: React.FC<KidsViewProps> = ({ onOpenExitModal }) => {
   return (
     <div className="space-y-6 pb-8">
       {/* Safe Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-3xl bg-gradient-to-r from-amber-500/20 via-pink-500/15 to-sky-500/20 border border-amber-400/30">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-strong)]">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">🎈</span>
+          <div className="w-10 h-10 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-xl">
+            🎈
+          </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)]">
+            <h1 className="text-lg sm:text-xl font-extrabold text-[var(--text-primary)]">
               Mixtape Kids
             </h1>
             <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)] mt-0.5">
               <span className="flex items-center gap-1">
-                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                <Volume2 className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
                 Volumen máx. {Math.round(maxVolume * 100)}%
               </span>
               {sleepTimerRemaining !== null && (
-                <span className="flex items-center gap-1 text-amber-400 font-bold">
+                <span className="flex items-center gap-1 text-[var(--theme-accent)] font-mono-tech font-bold">
                   <Moon className="w-3.5 h-3.5" />
                   Apagado en {formatTimer(sleepTimerRemaining)}
                 </span>
@@ -47,9 +49,9 @@ export const KidsView: React.FC<KidsViewProps> = ({ onOpenExitModal }) => {
         <button
           type="button"
           onClick={onOpenExitModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
         >
-          <Lock className="w-3.5 h-3.5 text-amber-400" />
+          <Lock className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
           Salir (Padres)
         </button>
       </div>
@@ -114,7 +116,7 @@ export const KidsView: React.FC<KidsViewProps> = ({ onOpenExitModal }) => {
                     </p>
                     <p className="text-xs text-[var(--text-secondary)] truncate">{track.artist}</p>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-[var(--theme-accent)] text-black flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[var(--theme-accent)] text-white flex items-center justify-center shrink-0">
                     {isCurrent && isPlaying ? (
                       <Pause className="w-4.5 h-4.5 fill-current" />
                     ) : (

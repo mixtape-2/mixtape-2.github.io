@@ -64,169 +64,174 @@ export const AccessGateModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 backdrop-blur-xl p-3 sm:p-6 overflow-y-auto select-none">
-      <div className="retro-tape-chassis w-full max-w-md rounded-3xl p-5 sm:p-7 border-2 border-[#2a3448] shadow-[0_25px_70px_rgba(0,0,0,0.95)] relative my-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6 overflow-y-auto select-none">
+      <div className="w-full max-w-md rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] shadow-2xl relative my-auto overflow-hidden">
         {/* Close button only if access is currently granted (e.g. user is in active trial) */}
         {isAccessGranted && (
           <button
+            type="button"
             onClick={() => setLoginModalOpen(false)}
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-zinc-300 hover:text-white transition"
+            className="absolute top-4 right-4 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
             aria-label="Cerrar"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4.5 h-4.5" />
           </button>
         )}
 
-        {/* Header */}
-        <div className="flex flex-col items-center text-center mb-5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 flex items-center justify-center shadow-[0_0_25px_rgba(245,158,11,0.4)] border border-white/30 mb-3">
-            <Lock className="w-7 h-7 text-black" />
-          </div>
-
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-black/70 border border-amber-500/40 font-mono-retro text-[10px] font-bold text-amber-400 mb-1">
-            <Radio className="w-3 h-3 text-amber-400 animate-pulse" />
-            <span>ACCESO PRIVADO • MIXTAPE HI-FI</span>
-          </div>
-
-          <h2 className="font-rock text-2xl sm:text-3xl tracking-widest text-white uppercase">
-            {isTrialExpired ? 'TIEMPO DE PRUEBA FINALIZADO' : 'CONTROL DE ACCESO'}
-          </h2>
-
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-xs">
-            {isTrialExpired
-              ? 'Tu hora de prueba gratuita ha concluido. Introduce tu Usuario y Contraseña vinculada a este dispositivo para continuar.'
-              : 'Acceso exclusivo con credenciales vinculadas a tu equipo.'}
-          </p>
-        </div>
-
-        {/* Device Hardware ID Box (Anti-Sharing Lock) */}
-        <div className="bg-black/70 border border-amber-500/30 rounded-2xl p-3.5 mb-5 shadow-inner">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <span className="text-[10px] font-mono-retro font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-              ID ÚNICO DE ESTE EQUIPO
-            </span>
-            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
-              1 USUARIO = 1 EQUIPO
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between gap-2 mt-1.5">
-            <div className="retro-counter-display px-3 py-2 rounded-xl font-mono-retro text-base sm:text-lg font-bold text-amber-400 tracking-widest flex-1 text-center border border-white/10">
-              {deviceId}
+        <div className="p-6 space-y-5">
+          {/* Header */}
+          <div className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] text-[var(--theme-accent)] flex items-center justify-center mb-3">
+              <Lock className="w-5.5 h-5.5" />
             </div>
 
-            <button
-              type="button"
-              onClick={handleCopyDeviceId}
-              className="px-3.5 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-mono-retro font-bold flex items-center gap-1.5 transition active:scale-95 shrink-0"
-              title="Copiar ID de Equipo para solicitar acceso"
-            >
-              {copiedDevice ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="text-emerald-300">COPIADO</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span>COPIAR ID</span>
-                </>
-              )}
-            </button>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] font-mono-tech text-[11px] font-semibold text-[var(--theme-accent)] mb-1.5">
+              <Radio className="w-3 h-3" />
+              <span>Mixtape 2 Studio · Acceso Privado</span>
+            </span>
+
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">
+              {isTrialExpired ? 'Tiempo de prueba finalizado' : 'Control de acceso'}
+            </h2>
+
+            <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs leading-relaxed">
+              {isTrialExpired
+                ? 'Tu hora de prueba gratuita ha concluido. Introduce tu usuario y contraseña vinculada a este dispositivo para continuar.'
+                : 'Acceso exclusivo con credenciales vinculadas a tu equipo.'}
+            </p>
           </div>
 
-          <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed">
-            Envía este código al administrador para recibir tu contraseña personal. Las claves están ligadas a este ID y no funcionan en otros dispositivos.
-          </p>
-        </div>
-
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          <div>
-            <label className="block text-[11px] font-mono-retro font-bold uppercase tracking-wider text-zinc-300 mb-1">
-              Usuario
-            </label>
-            <div className="relative">
-              <User className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Tu nombre de usuario"
-                autoComplete="username"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/70 border border-white/15 focus:border-amber-400 focus:outline-none text-sm text-white placeholder-zinc-500 font-mono"
-              />
+          {/* Device Hardware ID Box (Anti-Sharing Lock) */}
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-3.5 space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-[var(--text-secondary)] flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
+                ID único de este equipo
+              </span>
+              <span className="text-[10px] font-mono-tech font-semibold px-2 py-0.5 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border border-[var(--theme-badge-border)]">
+                1 usuario = 1 equipo
+              </span>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-[11px] font-mono-retro font-bold uppercase tracking-wider text-zinc-300 mb-1">
-              Contraseña / Clave de Equipo
-            </label>
-            <div className="relative">
-              <KeyRound className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Ej: MX-XXXX-XXXX"
-                autoComplete="current-password"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-black/70 border border-white/15 focus:border-amber-400 focus:outline-none text-sm text-white placeholder-zinc-500 font-mono"
-              />
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-2 rounded-xl bg-[var(--bg-elevated)] font-mono-tech text-sm sm:text-base font-bold text-[var(--text-primary)] tracking-widest flex-1 text-center border border-[var(--border-strong)]">
+                {deviceId}
+              </div>
+
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1"
-                tabIndex={-1}
+                onClick={handleCopyDeviceId}
+                className="px-3 py-2 rounded-xl bg-[var(--theme-badge-bg)] hover:brightness-110 text-[var(--theme-accent)] border border-[var(--theme-badge-border)] text-xs font-bold flex items-center gap-1.5 transition shrink-0 cursor-pointer"
+                title="Copiar ID de equipo para solicitar acceso"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {copiedDevice ? (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-400" />
+                    <span className="text-emerald-400">Copiado</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copiar</span>
+                  </>
+                )}
               </button>
             </div>
+
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              Envía este código al administrador para recibir tu contraseña personal. Las claves están ligadas a este ID y no funcionan en otros dispositivos.
+            </p>
           </div>
 
-          {error && (
-            <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/40 flex items-start gap-2 text-xs text-red-300">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <span>{error}</span>
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-3.5">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
+                Usuario
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Tu nombre de usuario"
+                  autoComplete="username"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-strong)] focus:border-[var(--theme-accent)] focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
+                Contraseña / Clave de equipo
+              </label>
+              <div className="relative">
+                <KeyRound className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Ej: MX-XXXX-XXXX"
+                  autoComplete="current-password"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-strong)] focus:border-[var(--theme-accent)] focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] font-mono-tech"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-2 text-xs text-red-400">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-sm transition active:scale-[0.99] cursor-pointer"
+            >
+              Desbloquear reproductor
+            </button>
+          </form>
+
+          {/* 1-Hour Free Trial Option (shown if trial has not started yet) */}
+          {!isTrialExpired && !isTrialActive && (
+            <div className="pt-4 border-t border-[var(--border-subtle)] text-center space-y-2.5">
+              <p className="text-xs text-[var(--text-secondary)]">
+                ¿Aún no tienes tu clave vinculada? Disfruta de una sesión de prueba completa:
+              </p>
+              <button
+                type="button"
+                onClick={startFreeTrial}
+                className="w-full py-2.5 px-4 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)] border border-[var(--border-strong)] font-semibold text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <Clock className="w-4 h-4 text-[var(--theme-accent)]" />
+                <span>Probar gratis durante 1 hora (60:00)</span>
+              </button>
             </div>
           )}
 
-          <button
-            type="submit"
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:brightness-110 text-black font-stereo font-black text-sm uppercase tracking-wider shadow-lg transition active:scale-[0.99]"
-          >
-            DESBLOQUEAR REPRODUCTOR
-          </button>
-        </form>
-
-        {/* 1-Hour Free Trial Option (shown if trial has not started yet) */}
-        {!isTrialExpired && !isTrialActive && (
-          <div className="mt-5 pt-4 border-t border-white/10 text-center">
-            <p className="text-xs text-zinc-400 mb-2.5">
-              ¿Aún no tienes tu clave vinculada? Disfruta de una sesión de prueba completa:
-            </p>
-            <button
-              type="button"
-              onClick={startFreeTrial}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-mono-retro font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-95"
-            >
-              <Clock className="w-4 h-4 text-emerald-400" />
-              <span>PROBAR GRATIS DURANTE 1 HORA (60:00)</span>
-            </button>
-          </div>
-        )}
-
-        {/* Active trial indicator inside modal if opened voluntarily */}
-        {isTrialActive && (
-          <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-emerald-300 font-mono">
-            <span className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-              Prueba activa restante:
-            </span>
-            <span className="font-bold">{formatCountdown(trialRemainingSeconds)}</span>
-          </div>
-        )}
+          {/* Active trial indicator inside modal if opened voluntarily */}
+          {isTrialActive && (
+            <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs text-[var(--text-secondary)] font-mono-tech">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-[var(--theme-accent)]" />
+                Prueba activa restante:
+              </span>
+              <span className="font-bold text-[var(--text-primary)]">
+                {formatCountdown(trialRemainingSeconds)}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

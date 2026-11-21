@@ -13,34 +13,31 @@ export const ReggaetonPrankModal: React.FC<ReggaetonPrankModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
       onClick={onAccept}
     >
       <div
-        className="relative w-full max-w-md p-6 sm:p-7 rounded-3xl bg-gradient-to-b from-[#1e1b24] via-[#141219] to-[#0d0c11] border-2 border-amber-500/50 shadow-[0_25px_70px_rgba(0,0,0,0.9)] text-center space-y-5 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-md p-6 rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] shadow-2xl text-center space-y-5"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Humorous cassette / brain / headphones badge */}
-        <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-3xl shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-2xl">
           🎧
         </div>
 
-        {/* Text requested by user */}
-        <div className="space-y-2.5">
-          <p className="text-[10.5px] font-mono uppercase tracking-widest text-amber-400 font-bold">
+        <div className="space-y-2">
+          <p className="text-[11px] font-mono-tech uppercase tracking-widest text-[var(--theme-accent)] font-bold">
             Aviso del Reproductor
           </p>
-          <p className="text-base sm:text-lg font-medium text-white leading-relaxed px-2">
+          <p className="text-base font-medium text-[var(--text-primary)] leading-relaxed px-2">
             “Para escuchal este tipo de ruido, no necesitas una aplicación. Lo que tú necesitas es un psicólogo, mi amol”
           </p>
         </div>
 
-        {/* Accept Button */}
-        <div className="pt-2">
+        <div className="pt-1">
           <button
             type="button"
             onClick={onAccept}
-            className="w-full py-3 px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm tracking-wide shadow-lg shadow-amber-500/25 transition active:scale-95 cursor-pointer"
+            className="w-full py-2.5 px-6 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-sm transition active:scale-[0.99] cursor-pointer"
           >
             Aceptar
           </button>

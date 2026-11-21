@@ -238,7 +238,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl text-xs font-bold bg-[var(--theme-accent)] text-black hover:brightness-110 transition cursor-pointer"
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-[var(--theme-accent)] text-white hover:brightness-110 transition cursor-pointer"
               >
                 Crear Lista
               </button>

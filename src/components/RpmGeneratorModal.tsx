@@ -126,7 +126,7 @@ export const RpmGeneratorModal: React.FC<RpmGeneratorModalProps> = ({ isOpen, on
         {/* Header */}
         <div className="px-5 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] text-[var(--theme-accent)] flex items-center justify-center">
               <Gauge className="w-4.5 h-4.5" />
             </div>
             <div>

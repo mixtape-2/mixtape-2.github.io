@@ -40,171 +40,185 @@ export const KidsModeModal: React.FC<KidsModeModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none animate-in fade-in">
-      <div className="w-full max-w-md rounded-3xl bg-gradient-to-b from-[#182032] to-[#0c101c] p-6 shadow-2xl relative border-2 border-emerald-500/40 text-white max-h-[90vh] overflow-y-auto">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] shadow-2xl max-h-[88dvh] flex flex-col overflow-hidden"
+      >
         {/* Header */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-500/30">
-            <Baby className="w-7 h-7" />
+        <div className="px-5 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] text-[var(--theme-accent)] flex items-center justify-center shrink-0">
+              <Baby className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
+                <span className="truncate">Modo Seguro para Niños</span>
+              </h2>
+              <p className="text-xs text-[var(--text-secondary)] truncate">
+                Filtro infantil, volumen protegido y candado parental
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>Modo Seguro para Niños</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-mono">
-                KIDS SAFE
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition cursor-pointer shrink-0"
+            aria-label="Cerrar"
+          >
+            <X className="w-4.5 h-4.5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Feature Highlights */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center gap-2 text-[var(--text-secondary)]">
+              <ShieldCheck className="w-4 h-4 text-[var(--theme-accent)] shrink-0" />
+              <span>Filtro estricto infantil</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center gap-2 text-[var(--text-secondary)]">
+              <Volume2 className="w-4 h-4 text-[var(--theme-accent)] shrink-0" />
+              <span>Límite de decibelios</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center gap-2 text-[var(--text-secondary)]">
+              <Moon className="w-4 h-4 text-[var(--theme-accent)] shrink-0" />
+              <span>Temporizador de sueño</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center gap-2 text-[var(--text-secondary)]">
+              <Lock className="w-4 h-4 text-[var(--theme-accent)] shrink-0" />
+              <span>Candado PIN / reto</span>
+            </div>
+          </div>
+
+          {/* Setting 1: Safe Volume Limit */}
+          <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-primary)]">
+                <Volume2 className="w-4 h-4 text-[var(--theme-accent)]" />
+                <span>Protección auditiva (volumen máx.)</span>
+              </div>
+              <span className="text-xs font-mono-tech font-bold text-[var(--theme-accent)]">
+                {Math.round(maxVolume * 100)}%
               </span>
-            </h2>
-            <p className="text-xs text-zinc-400">
-              Entorno protegido con filtro de contenidos y volumen seguro
+            </div>
+            <input
+              type="range"
+              min="0.3"
+              max="0.85"
+              step="0.05"
+              value={maxVolume}
+              onChange={(e) => setMaxVolume(parseFloat(e.target.value))}
+              className="w-full studio-slider"
+            />
+            <p className="text-[11px] text-[var(--text-muted)]">
+              Impide que la música suba por encima de este nivel en auriculares o altavoz.
             </p>
           </div>
-        </div>
 
-        {/* Feature Highlights */}
-        <div className="grid grid-cols-2 gap-2 mb-5 text-[11px]">
-          <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2 text-zinc-300">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Filtro de búsqueda estricto infantil</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2 text-zinc-300">
-            <Volume2 className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Límite de decibelios para oídos</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2 text-zinc-300">
-            <Moon className="w-4 h-4 text-purple-400 shrink-0" />
-            <span>Temporizador de sueño relajante</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex items-center gap-2 text-zinc-300">
-            <Lock className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>Candado parental con PIN/Reto</span>
-          </div>
-        </div>
-
-        {/* Setting 1: Safe Volume Limit */}
-        <div className="mb-4 p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <Volume2 className="w-4 h-4 text-amber-400" />
-              <span>Protección Auditiva (Volumen Máximo)</span>
+          {/* Setting 2: Sleep Timer */}
+          <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-primary)]">
+                <Moon className="w-4 h-4 text-[var(--theme-accent)]" />
+                <span>Temporizador de sueño</span>
+              </div>
+              {sleepTimerMinutes && (
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] text-[var(--theme-accent)] font-mono-tech font-bold">
+                  {sleepTimerMinutes}m activo
+                </span>
+              )}
             </div>
-            <span className="text-xs font-mono font-bold text-amber-400">
-              {Math.round(maxVolume * 100)}%
-            </span>
-          </div>
-          <input
-            type="range"
-            min="0.3"
-            max="0.85"
-            step="0.05"
-            value={maxVolume}
-            onChange={(e) => setMaxVolume(parseFloat(e.target.value))}
-            className="w-full accent-amber-400 h-2 bg-black/50 rounded-lg cursor-pointer"
-          />
-          <p className="text-[10px] text-zinc-400">
-            Impide que la música suba por encima de este nivel en auriculares o altavoz.
-          </p>
-        </div>
-
-        {/* Setting 2: Sleep Timer */}
-        <div className="mb-4 p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <Moon className="w-4 h-4 text-purple-400" />
-              <span>Temporizador de Sueño (Apagado Suave)</span>
+            <div className="flex items-center gap-2">
+              {[15, 30, 45, 60].map((mins) => (
+                <button
+                  key={mins}
+                  type="button"
+                  onClick={() =>
+                    sleepTimerMinutes === mins ? cancelSleepTimer() : startSleepTimer(mins)
+                  }
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold font-mono-tech border transition cursor-pointer ${
+                    sleepTimerMinutes === mins
+                      ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
+                      : 'bg-[var(--bg-elevated)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] border-[var(--border-subtle)]'
+                  }`}
+                >
+                  {mins}m
+                </button>
+              ))}
+              {sleepTimerMinutes && (
+                <button
+                  type="button"
+                  onClick={cancelSleepTimer}
+                  className="py-2 px-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 text-xs font-bold cursor-pointer"
+                >
+                  Off
+                </button>
+              )}
             </div>
-            {sleepTimerMinutes && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-mono font-bold">
-                {sleepTimerMinutes}m activo
-              </span>
-            )}
           </div>
-          <div className="flex items-center gap-2 pt-1">
-            {[15, 30, 45, 60].map((mins) => (
-              <button
-                key={mins}
-                onClick={() =>
-                  sleepTimerMinutes === mins ? cancelSleepTimer() : startSleepTimer(mins)
-                }
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold font-mono transition ${
-                  sleepTimerMinutes === mins
-                    ? 'bg-purple-500 text-white shadow-md shadow-purple-500/30'
-                    : 'bg-white/10 hover:bg-white/15 text-zinc-300'
-                }`}
-              >
-                {mins}m
-              </button>
-            ))}
-            {sleepTimerMinutes && (
-              <button
-                onClick={cancelSleepTimer}
-                className="py-1.5 px-2 rounded-lg bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 text-xs font-bold"
-              >
-                Off
-              </button>
-            )}
-          </div>
-        </div>
 
-        {/* Setting 3: Parental Password */}
-        <div className="mb-5 p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-semibold text-white">
-              <Lock className="w-4 h-4 text-rose-400" />
-              <span>Contraseña Parental de Desbloqueo</span>
+          {/* Setting 3: Parental Password */}
+          <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-primary)]">
+                <Lock className="w-4 h-4 text-[var(--theme-accent)]" />
+                <span>Contraseña parental de desbloqueo</span>
+              </div>
+              {passwordSaved && (
+                <span className="text-xs text-emerald-400 flex items-center gap-1 font-semibold">
+                  <Check className="w-3.5 h-3.5" /> Guardada
+                </span>
+              )}
             </div>
-            {passwordSaved && (
-              <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-bold">
-                <Check className="w-3 h-3" /> Guardada
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                maxLength={20}
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="Contraseña (ej: 1234)"
-                className="w-full py-1.5 pl-3 pr-8 rounded-lg bg-black/50 border border-white/20 text-sm font-mono text-white focus:outline-none focus:border-rose-400"
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  maxLength={20}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Contraseña (ej: 1234)"
+                  className="w-full py-2 pl-3 pr-8 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] text-sm font-mono-tech text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-accent)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                  title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-                title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                onClick={handleSavePassword}
+                disabled={passwordInput.trim().length < 3}
+                className="py-2 px-3.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-strong)] disabled:opacity-40 text-xs font-bold text-[var(--text-primary)] transition cursor-pointer"
               >
-                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                Guardar
               </button>
             </div>
-            <button
-              onClick={handleSavePassword}
-              disabled={passwordInput.trim().length < 3}
-              className="py-1.5 px-3 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold text-white transition cursor-pointer"
-            >
-              Guardar
-            </button>
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+              Imprescindible para autorizar la salida del Modo Niños. Por defecto:{' '}
+              <span className="text-[var(--text-secondary)] font-mono-tech font-bold">1234</span>.
+            </p>
           </div>
-          <p className="text-[10px] text-zinc-400">
-            Esta contraseña es imprescindible para autorizar la salida del Modo Niños, impidiendo que menores o niños de 12 años salgan resolviendo solo la operación matemática. Por defecto: <span className="text-zinc-300 font-mono font-bold">1234</span>.
-          </p>
-        </div>
 
-        {/* Activate Button */}
-        <button
-          onClick={handleStartKidsMode}
-          className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-base shadow-xl shadow-emerald-500/30 transition transform active:scale-98 flex items-center justify-center gap-2"
-        >
-          <Baby className="w-5 h-5" />
-          <span>{isKidsMode ? 'Volver al Modo Niños' : 'Activar Modo Niños'}</span>
-        </button>
+          {/* Activate Button */}
+          <button
+            type="button"
+            onClick={handleStartKidsMode}
+            className="w-full py-3 px-5 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-sm transition active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Baby className="w-4.5 h-4.5" />
+            <span>{isKidsMode ? 'Volver al Modo Niños' : 'Activar Modo Niños'}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

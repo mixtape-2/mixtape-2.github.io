@@ -78,7 +78,7 @@ export const ResumeTapeModal: React.FC<ResumeTapeModalProps> = ({
             <button
               type="button"
               onClick={onResume}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] text-black font-bold text-xs hover:brightness-110 transition cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] text-white font-bold text-xs hover:brightness-110 transition cursor-pointer"
             >
               <Play className="w-4 h-4 fill-current" />
               Continuar donde se quedó

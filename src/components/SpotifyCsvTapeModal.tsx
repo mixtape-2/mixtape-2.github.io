@@ -312,570 +312,562 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md select-none animate-in fade-in overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-3xl glass-panel p-5 sm:p-6 shadow-2xl relative border-2 border-[#2b3548] max-h-[90dvh] overflow-y-auto my-auto space-y-4"
+        className="w-full max-w-xl max-h-[88dvh] flex flex-col rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 p-2 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* Modal Header */}
-        <div className="flex items-center gap-3 border-b border-white/10 pb-3.5 pr-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500/25 to-teal-500/25 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-lg shadow-emerald-500/20">
-            <Radio className="w-6 h-6 animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase font-bold tracking-widest text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                EXPORTIFY & SPOTIFY CSV
-              </span>
-              <span className="text-[10px] font-mono uppercase font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3" /> COINCIDENCIA EXACTA
-              </span>
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-accent)] shrink-0">
+              <FileSpreadsheet className="w-4.5 h-4.5" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-rock tracking-widest text-white leading-tight mt-0.5">
-              GRABADORA DE CINTAS SPOTIFY
-            </h2>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-[var(--text-primary)] truncate">
+                  Importar Playlist CSV
+                </h2>
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono-tech font-semibold text-[var(--theme-accent)] bg-[var(--theme-badge-bg)] px-2 py-0.5 rounded-md border border-[var(--theme-badge-border)] shrink-0">
+                  <ShieldCheck className="w-3 h-3" /> Coincidencia exacta
+                </span>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] truncate">
+                Spotify, Apple Music, Exportify, TuneMyMusic o Soundiiz
+              </p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition cursor-pointer shrink-0"
+            aria-label="Cerrar"
+          >
+            <X className="w-4.5 h-4.5" />
+          </button>
         </div>
 
-        {/* Error Notification */}
-        {errorMsg && (
-          <div className="p-3 rounded-2xl bg-red-500/15 border border-red-500/35 text-red-300 text-xs flex items-center gap-2 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {/* ==============================================================
-            STEP 1: INPUT CSV (FILE OR PASTE)
-           ============================================================== */}
-        {step === 'input' && (
-          <div className="space-y-4">
-            <p className="text-xs text-zinc-300 leading-relaxed">
-              Carga tu archivo exportado de Spotify (desde <strong>Exportify</strong>, <strong>TuneMyMusic</strong> o Soundiiz) o pega la lista de canciones. Mixtape buscará automáticamente los streams con <strong>coincidencia estricta y exacta</strong> (título, artista y duración), omitiendo cualquier resultado ambiguo para proteger la calidad de tu cinta.
-            </p>
-
-            {/* Input Mode Selector */}
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/40 border border-white/10">
-              <button
-                type="button"
-                onClick={() => setInputTab('upload')}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                  inputTab === 'upload'
-                    ? 'bg-amber-400 text-black shadow-md'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Upload className="w-4 h-4" />
-                <span>Subir archivo .CSV</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setInputTab('paste')}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                  inputTab === 'paste'
-                    ? 'bg-amber-400 text-black shadow-md'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <FileText className="w-4 h-4" />
-                <span>Pegar texto CSV</span>
-              </button>
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Error Notification */}
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMsg}</span>
             </div>
+          )}
 
-            {inputTab === 'upload' ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-emerald-500/40 hover:border-emerald-400/80 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-2xl p-6 sm:p-8 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 group"
-              >
-                <div className="w-14 h-14 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-                  <FileSpreadsheet className="w-7 h-7" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">Haz clic aquí para seleccionar tu archivo CSV</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">Compatible con archivos .csv y .txt de Spotify</p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv,.txt"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <textarea
-                  value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
-                  placeholder={`Pega aquí el contenido de tu CSV de Spotify...\nEjemplo:\nTrack Name,Artist Name(s),Album Name,Duration (ms)\nBohemian Rhapsody,Queen,A Night At The Opera,354320`}
-                  className="w-full h-36 p-3 rounded-2xl bg-black/50 border border-white/10 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-400"
-                />
+          {/* ==============================================================
+              STEP 1: INPUT CSV (FILE OR PASTE)
+             ============================================================== */}
+          {step === 'input' && (
+            <div className="space-y-4">
+              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                Carga tu archivo exportado (<strong className="text-[var(--text-primary)]">.csv</strong> o{' '}
+                <strong className="text-[var(--text-primary)]">.txt</strong>) o pega directamente el listado. Mixtape buscará cada pista con{' '}
+                <strong className="text-[var(--text-primary)]">coincidencia estricta</strong> de título, artista y duración, omitiendo resultados ambiguos.
+              </p>
+
+              {/* Input Mode Selector */}
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={handlePasteSubmit}
-                  className="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs shadow-md transition active:scale-95 cursor-pointer"
+                  onClick={() => setInputTab('upload')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-2 cursor-pointer ${
+                    inputTab === 'upload'
+                      ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
+                  }`}
                 >
-                  Analizar canciones
+                  <Upload className="w-4 h-4" />
+                  <span>Subir archivo .CSV</span>
                 </button>
-              </div>
-            )}
-
-            {/* Quick Demo Button */}
-            <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-              <span className="text-xs text-zinc-500">¿No tienes un CSV a mano?</span>
-              <button
-                type="button"
-                onClick={handleLoadDemo}
-                className="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 transition underline cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Cargar lista demo de prueba</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ==============================================================
-            STEP 2: PREVIEW DETECTED TRACKS & CONFIGURE CASSETTE TAPE
-           ============================================================== */}
-        {step === 'preview' && (
-          <div className="space-y-4">
-            {/* Tape Name Input */}
-            <div>
-              <label className="block text-xs font-semibold text-zinc-400 mb-1">
-                Nombre de la Cinta / Cassette:
-              </label>
-              <input
-                type="text"
-                value={tapeName}
-                onChange={(e) => setTapeName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/15 text-white font-stereo text-sm font-bold focus:outline-none focus:border-amber-400"
-              />
-            </div>
-
-            {/* Tape Bias Type */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-zinc-400">
-                  Tipo de Cinta Magnética (Emulsión):
-                </label>
                 <button
                   type="button"
-                  onClick={() => setShowTypeExplanation(!showTypeExplanation)}
-                  className="text-[11px] text-amber-400 hover:text-amber-300 font-mono flex items-center gap-1 transition cursor-pointer"
+                  onClick={() => setInputTab('paste')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-2 cursor-pointer ${
+                    inputTab === 'paste'
+                      ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
+                  }`}
                 >
-                  <Info className="w-3.5 h-3.5" />
-                  <span>¿Diferencias entre tipos?</span>
-                  {showTypeExplanation ? (
-                    <ChevronUp className="w-3 h-3" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3" />
-                  )}
+                  <FileText className="w-4 h-4" />
+                  <span>Pegar texto CSV</span>
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: 'type1', name: 'Type I (Ferro)', desc: 'EQ Normal 120µs', tag: 'Cálido' },
-                  { id: 'type2', name: 'Type II (Chrome)', desc: 'High Bias 70µs', tag: 'Recomendada' },
-                  { id: 'type4', name: 'Type IV (Metal)', desc: 'Metal Bias 70µs', tag: 'Audiófilo' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setTapeType(t.id as any)}
-                    className={`p-2 rounded-xl border text-center transition cursor-pointer ${
-                      tapeType === t.id
-                        ? 'bg-amber-500/20 text-white border-amber-400 shadow-md ring-1 ring-amber-400/40'
-                        : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white'
-                    }`}
-                  >
-                    <p className="text-xs font-bold font-mono">{t.name}</p>
-                    <p className="text-[9px] text-zinc-500 font-mono mt-0.5">{t.desc}</p>
-                    <span className={`inline-block text-[8px] font-mono uppercase px-1.5 py-0.2 rounded mt-1 ${
-                      tapeType === t.id ? 'bg-amber-400 text-black font-bold' : 'bg-white/5 text-zinc-500'
-                    }`}>
-                      {t.tag}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Tape Type Quick Guide (Accordion) */}
-              {showTypeExplanation && (
-                <div className="p-3 rounded-xl bg-black/60 border border-amber-500/30 text-xs space-y-2 animate-in fade-in slide-in-from-top-1 text-zinc-300 font-mono">
-                  <div className="border-b border-white/10 pb-1.5">
-                    <p className="font-bold text-amber-300">📼 Type I - Normal / Ferro (120µs):</p>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Óxido de hierro. Calidez analógica clásica de los 70s/80s con medios ricos y soplido de cinta vintage. Ideal para voces y pop acústico.
-                    </p>
-                  </div>
-                  <div className="border-b border-white/10 pb-1.5">
-                    <p className="font-bold text-amber-300">💽 Type II - Chrome / CrO₂ (70µs):</p>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Dióxido de cromo. Alta fidelidad, agudos nítidos y transparentes, menor distorsión y soplido reducido. Es el estándar recomendado para rock, pop y electrónica.
-                    </p>
+              {inputTab === 'upload' ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border border-dashed border-[var(--border-strong)] hover:border-[var(--theme-accent)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] rounded-xl p-7 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-accent)]">
+                    <FileSpreadsheet className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="font-bold text-amber-300">⚡ Type IV - Metal Puro (70µs):</p>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Partículas de hierro puro. Máximo rango dinámico de estudio, cero saturación en picos y pegada de graves contundente. Nivel audiófilo master.
+                    <p className="text-sm font-bold text-[var(--text-primary)]">
+                      Haz clic para seleccionar tu archivo CSV
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                      Compatible con archivos .csv y .txt (Spotify, Apple Music, TuneMyMusic, Soundiiz)
                     </p>
                   </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <textarea
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    placeholder={`Pega aquí el contenido de tu CSV...\nEjemplo:\nTrack Name,Artist Name(s),Album Name,Duration (ms)\nBohemian Rhapsody,Queen,A Night At The Opera,354320`}
+                    className="w-full h-36 p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-strong)] text-xs font-mono-tech text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-accent)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handlePasteSubmit}
+                    className="w-full py-2.5 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-xs transition active:scale-[0.99] cursor-pointer"
+                  >
+                    Analizar canciones
+                  </button>
                 </div>
               )}
-            </div>
 
-            {/* Detected Tracks Header */}
-            <div className="flex items-center justify-between border-t border-white/10 pt-3">
-              <div className="flex items-center gap-2">
-                <Music2 className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-white">
-                  {selectedIds.size} de {parsedTracks.length} canciones seleccionadas
-                </span>
+              {/* Quick Demo Button */}
+              <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between">
+                <span className="text-xs text-[var(--text-muted)]">¿No tienes un CSV a mano?</span>
+                <button
+                  type="button"
+                  onClick={handleLoadDemo}
+                  className="text-xs font-semibold text-[var(--theme-accent)] hover:underline flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Cargar lista demo de prueba</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (selectedIds.size === parsedTracks.length) setSelectedIds(new Set());
-                  else setSelectedIds(new Set(parsedTracks.map((t) => t.id)));
-                }}
-                className="text-xs font-mono text-amber-400 hover:underline cursor-pointer"
-              >
-                {selectedIds.size === parsedTracks.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
-              </button>
             </div>
+          )}
 
-            {/* Scrollable Track List */}
-            <div className="max-h-52 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-              {parsedTracks.map((tr, idx) => {
-                const isSelected = selectedIds.has(tr.id);
-                return (
-                  <div
-                    key={tr.id}
-                    onClick={() => toggleSelectTrack(tr.id)}
-                    className={`flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer ${
-                      isSelected
-                        ? 'bg-white/10 border-white/20 text-white'
-                        : 'bg-black/20 border-white/5 text-zinc-500 opacity-60'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <span className="w-5 text-right font-mono text-[10px] text-zinc-500">
-                        {idx + 1}
-                      </span>
-                      <div className="truncate">
-                        <p className="text-xs font-semibold truncate leading-tight text-white">
-                          {tr.title}
-                        </p>
-                        <p className="text-[10px] text-zinc-400 truncate mt-0.5">
-                          {tr.artist} {tr.album ? `• ${tr.album}` : ''}
-                          {tr.durationMs
-                            ? ` (${Math.floor(tr.durationMs / 60000)}:${String(
-                                Math.floor((tr.durationMs % 60000) / 1000)
-                              ).padStart(2, '0')})`
-                            : ''}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${
-                        isSelected
-                          ? 'bg-amber-400 border-amber-400 text-black'
-                          : 'border-white/20'
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="pt-2 border-t border-white/10 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setStep('input')}
-                className="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-bold text-xs transition cursor-pointer"
-              >
-                ← Volver a cargar
-              </button>
-
-              <button
-                type="button"
-                onClick={startTapeRecording}
-                disabled={selectedIds.size === 0}
-                className="flex-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-red-600 via-amber-500 to-amber-600 hover:from-red-500 hover:to-amber-500 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition active:scale-95 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse border border-white" />
-                <span>● Grabar en Cinta ({selectedIds.size})</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ==============================================================
-            STEP 3: ACTIVE RECORDING ANIMATION & STRICT MATCHING
-           ============================================================== */}
-        {step === 'recording' && (
-          <div className="p-6 rounded-2xl bg-black/60 border-2 border-amber-500/50 space-y-5 text-center shadow-inner">
-            {/* Blinking REC LED Header */}
-            <div className="flex items-center justify-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-              <span className="text-sm font-mono-retro font-black uppercase tracking-widest text-red-400">
-                ● GRABANDO EN CABEZAL DE CINTA HI-FI
-              </span>
-            </div>
-
-            {/* Animated Cassette Spools */}
-            <div className="flex items-center justify-center gap-8 py-3">
-              <Disc3 className="w-14 h-14 text-amber-400 animate-spin" style={{ animationDuration: '1.2s' }} />
-              <div className="space-y-1">
-                <p className="text-xs font-mono uppercase text-zinc-400 font-bold">CASSETTE REC</p>
-                <p className="text-base font-stereo font-black text-white truncate max-w-[220px]">
-                  {recordProgress.currentTitle}
-                </p>
-                <p className="text-xs font-mono text-amber-400 truncate max-w-[220px]">
-                  {recordProgress.currentArtist}
-                </p>
-              </div>
-              <Disc3 className="w-14 h-14 text-amber-400 animate-spin" style={{ animationDuration: '1.2s' }} />
-            </div>
-
-            {/* Live Counters */}
-            <div className="flex items-center justify-center gap-4 text-xs font-mono">
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                ✓ Grabadas: {recordProgress.successCount}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                ⚠ Omitidas: {recordProgress.failedCount}
-              </span>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <div className="w-full h-3 rounded-full bg-zinc-800 overflow-hidden p-0.5 border border-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-red-500 via-amber-400 to-emerald-400 transition-all duration-200"
-                  style={{
-                    width: `${recordProgress.total > 0 ? (recordProgress.current / recordProgress.total) * 100 : 0}%`,
-                  }}
+          {/* ==============================================================
+              STEP 2: PREVIEW DETECTED TRACKS & CONFIGURE PLAYLIST
+             ============================================================== */}
+          {step === 'preview' && (
+            <div className="space-y-4">
+              {/* Playlist Name Input */}
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
+                  Nombre de la playlist
+                </label>
+                <input
+                  type="text"
+                  value={tapeName}
+                  onChange={(e) => setTapeName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-strong)] text-[var(--text-primary)] text-sm font-semibold focus:outline-none focus:border-[var(--theme-accent)]"
                 />
               </div>
-              <div className="flex items-center justify-between text-xs font-mono text-zinc-400">
-                <span>Pista {recordProgress.current} de {recordProgress.total}</span>
-                <span>
-                  {recordProgress.total > 0
-                    ? Math.round((recordProgress.current / recordProgress.total) * 100)
-                    : 0}%
-                </span>
-              </div>
-            </div>
 
-            {/* Cancel Button */}
-            <button
-              type="button"
-              onClick={() => {
-                isCancelledRef.current = true;
-                setStep('preview');
-              }}
-              className="py-1.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 text-xs font-mono transition cursor-pointer"
-            >
-              Cancelar grabación
-            </button>
-          </div>
-        )}
-
-        {/* ==============================================================
-            STEP 4: COMPLETE RECORDING REPORT WINDOW
-           ============================================================== */}
-        {step === 'complete' && (
-          <div className="space-y-4">
-            {/* Header depending on results */}
-            {resolvedTracks.length > 0 && failedTracks.length === 0 ? (
-              // 100% SUCCESS
-              <div className="p-5 rounded-2xl bg-gradient-to-b from-emerald-500/20 via-black/40 to-black/60 border-2 border-emerald-500/40 text-center space-y-3">
-                <div className="w-14 h-14 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-xl shadow-emerald-500/20">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-rock tracking-wider text-white">
-                    ¡CINTA GRABADA AL 100%!
-                  </h3>
-                  <p className="text-sm font-semibold text-emerald-300 mt-0.5">
-                    "{tapeName}"
-                  </p>
-                  <p className="text-xs text-zinc-300 font-mono mt-1">
-                    Se han verificado y grabado {resolvedTracks.length} canciones con coincidencia exacta y calidad Hi-Fi en tu biblioteca.
-                  </p>
-                </div>
-              </div>
-            ) : resolvedTracks.length > 0 && failedTracks.length > 0 ? (
-              // PARTIAL SUCCESS WITH FAILED REPORT
-              <div className="p-4 rounded-2xl bg-gradient-to-b from-amber-500/15 via-black/40 to-black/60 border-2 border-amber-500/40 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-                    <AlertTriangle className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-rock tracking-wider text-white">
-                      GRABACIÓN COMPLETADA CON REPORTE
-                    </h3>
-                    <p className="text-xs font-semibold text-amber-300">
-                      "{tapeName}"
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-center">
-                    <p className="text-xs font-bold text-emerald-300">
-                      ✓ {resolvedTracks.length} grabadas
-                    </p>
-                    <p className="text-[10px] text-zinc-400">Coincidencia exacta</p>
-                  </div>
-                  <div className="flex-1 p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-center">
-                    <p className="text-xs font-bold text-amber-300">
-                      ⚠ {failedTracks.length} omitidas
-                    </p>
-                    <p className="text-[10px] text-zinc-400">Sin resultado exacto</p>
-                  </div>
-                </div>
-
-                <p className="text-xs text-zinc-300 leading-relaxed">
-                  Para garantizar que tu cinta sólo contenga las versiones originales legítimas de tu lista de Spotify, Mixtape <strong>no grabó</strong> las canciones sin coincidencia exacta verificada de artista, título o duración.
-                </p>
-              </div>
-            ) : (
-              // ZERO TRACKS RECORDED
-              <div className="p-5 rounded-2xl bg-gradient-to-b from-red-500/20 via-black/40 to-black/60 border-2 border-red-500/40 text-center space-y-3">
-                <div className="w-14 h-14 mx-auto rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 shadow-xl shadow-red-500/20">
-                  <AlertCircle className="w-8 h-8" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-rock tracking-wider text-white">
-                    NO SE PUDO GRABAR LA CINTA
-                  </h3>
-                  <p className="text-xs text-zinc-300 font-mono mt-1">
-                    Ninguna de las {failedTracks.length} canciones seleccionadas superó la verificación estricta de título y artista. No se creó ninguna cinta vacía.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* UNRECORDED TRACKS REPORT WINDOW (when failedTracks > 0) */}
-            {failedTracks.length > 0 && (
-              <div className="p-3.5 rounded-2xl bg-black/60 border border-amber-500/35 space-y-2.5">
+              {/* Audio Profile / Tape Type */}
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <AlertCircle className="w-4 h-4 text-amber-400" />
-                    <span>Pistas no grabadas ({failedTracks.length}):</span>
-                  </span>
-
+                  <label className="text-xs font-semibold text-[var(--text-secondary)]">
+                    Perfil de archivo
+                  </label>
                   <button
                     type="button"
-                    onClick={handleCopyMissingTracks}
-                    className="px-2.5 py-1 rounded-lg bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-300 text-[11px] font-mono font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                    onClick={() => setShowTypeExplanation(!showTypeExplanation)}
+                    className="text-xs text-[var(--theme-accent)] hover:underline flex items-center gap-1 transition cursor-pointer"
                   >
-                    {copiedMissing ? (
-                      <>
-                        <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">¡Copiado!</span>
-                      </>
+                    <Info className="w-3.5 h-3.5" />
+                    <span>Ver diferencias</span>
+                    {showTypeExplanation ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
                     ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copiar lista de omitidas</span>
-                      </>
+                      <ChevronDown className="w-3.5 h-3.5" />
                     )}
                   </button>
                 </div>
 
-                {/* Scrollable list of failed tracks */}
-                <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-                  {failedTracks.map((item, idx) => (
-                    <div
-                      key={item.track.id || idx}
-                      className="p-2 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between gap-2 text-xs"
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'type1', name: 'Type I (Ferro)', desc: '120µs · Cálido' },
+                    { id: 'type2', name: 'Type II (Chrome)', desc: '70µs · Estándar' },
+                    { id: 'type4', name: 'Type IV (Metal)', desc: '70µs · Master' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTapeType(t.id as any)}
+                      className={`p-2.5 rounded-xl border text-center transition cursor-pointer ${
+                        tapeType === t.id
+                          ? 'bg-[var(--theme-badge-bg)] text-[var(--text-primary)] border-[var(--theme-badge-border)]'
+                          : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
+                      }`}
                     >
-                      <div className="min-w-0">
-                        <p className="font-semibold text-white truncate leading-tight">
-                          {idx + 1}. {item.track.title}
-                        </p>
-                        <p className="text-[10px] text-zinc-400 truncate mt-0.5">
-                          {item.track.artist} {item.track.album ? `• ${item.track.album}` : ''}
-                        </p>
-                      </div>
-                      <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
-                        {item.reason}
-                      </span>
-                    </div>
+                      <p className="text-xs font-bold">{t.name}</p>
+                      <p className="text-[11px] font-mono-tech text-[var(--text-muted)] mt-0.5">
+                        {t.desc}
+                      </p>
+                    </button>
                   ))}
                 </div>
 
-                <p className="text-[10px] text-zinc-500 font-mono">
-                  💡 Tip: Puedes buscar manualmente estas canciones desde la pestaña de búsqueda para agregarlas individualmente a tu cinta.
+                {showTypeExplanation && (
+                  <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs space-y-2 text-[var(--text-secondary)]">
+                    <div className="border-b border-[var(--border-subtle)] pb-2">
+                      <p className="font-bold text-[var(--text-primary)]">Type I - Normal / Ferro (120µs)</p>
+                      <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                        Perfil clásico con medios cálidos, ideal para voces y acústico.
+                      </p>
+                    </div>
+                    <div className="border-b border-[var(--border-subtle)] pb-2">
+                      <p className="font-bold text-[var(--text-primary)]">Type II - Chrome / CrO₂ (70µs)</p>
+                      <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                        Equilibrio nítido y transparente. Recomendado para rock, pop y electrónica.
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-[var(--text-primary)]">Type IV - Metal (70µs)</p>
+                      <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                        Máximo rango dinámico y respuesta contundente en graves.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Detected Tracks Header */}
+              <div className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
+                <div className="flex items-center gap-2">
+                  <Music2 className="w-4 h-4 text-[var(--theme-accent)]" />
+                  <span className="text-xs font-bold text-[var(--text-primary)]">
+                    {selectedIds.size} de {parsedTracks.length} canciones seleccionadas
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedIds.size === parsedTracks.length) setSelectedIds(new Set());
+                    else setSelectedIds(new Set(parsedTracks.map((t) => t.id)));
+                  }}
+                  className="text-xs font-semibold text-[var(--theme-accent)] hover:underline cursor-pointer"
+                >
+                  {selectedIds.size === parsedTracks.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
+                </button>
+              </div>
+
+              {/* Scrollable Track List */}
+              <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                {parsedTracks.map((tr, idx) => {
+                  const isSelected = selectedIds.has(tr.id);
+                  return (
+                    <div
+                      key={tr.id}
+                      onClick={() => toggleSelectTrack(tr.id)}
+                      className={`flex items-center justify-between p-2.5 rounded-xl border transition cursor-pointer ${
+                        isSelected
+                          ? 'bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--text-primary)]'
+                          : 'bg-[var(--bg-surface)]/40 border-[var(--border-subtle)] text-[var(--text-muted)] opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                        <span className="w-6 text-right font-mono-tech text-xs text-[var(--text-muted)]">
+                          {idx + 1}
+                        </span>
+                        <div className="truncate">
+                          <p className="text-xs font-semibold truncate leading-tight text-[var(--text-primary)]">
+                            {tr.title}
+                          </p>
+                          <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
+                            {tr.artist} {tr.album ? `· ${tr.album}` : ''}
+                            {tr.durationMs
+                              ? ` · ${Math.floor(tr.durationMs / 60000)}:${String(
+                                  Math.floor((tr.durationMs % 60000) / 1000)
+                                ).padStart(2, '0')}`
+                              : ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition ${
+                          isSelected
+                            ? 'bg-[var(--theme-accent)] border-[var(--theme-accent)] text-white'
+                            : 'border-[var(--border-strong)]'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setStep('input')}
+                  className="px-4 py-2.5 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-strong)] text-[var(--text-primary)] font-semibold text-xs transition cursor-pointer"
+                >
+                  Volver
+                </button>
+
+                <button
+                  type="button"
+                  onClick={startTapeRecording}
+                  disabled={selectedIds.size === 0}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-xs transition active:scale-[0.99] disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Radio className="w-4 h-4" />
+                  <span>Importar playlist ({selectedIds.size})</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ==============================================================
+              STEP 3: ACTIVE MATCHING & IMPORT PROGRESS
+             ============================================================== */}
+          {step === 'recording' && (
+            <div className="p-6 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-5 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Disc3 className="w-5 h-5 text-[var(--theme-accent)] animate-spin" />
+                <span className="text-xs font-mono-tech font-bold uppercase tracking-wider text-[var(--theme-accent)]">
+                  Buscando coincidencias exactas
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-base font-bold text-[var(--text-primary)] truncate">
+                  {recordProgress.currentTitle}
+                </p>
+                <p className="text-xs text-[var(--text-secondary)] truncate">
+                  {recordProgress.currentArtist}
                 </p>
               </div>
-            )}
 
-            {/* Next Action Buttons */}
-            {resolvedTracks.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={handlePlayNow}
-                  className="py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30 transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <Play className="w-4 h-4 fill-slate-950" />
-                  <span>Escuchar cinta ahora ({resolvedTracks.length}) ▶</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleOpenInLibrary}
-                  className="py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/10 transition active:scale-95 cursor-pointer"
-                >
-                  Ver en Mixtapes & Cintas
-                </button>
+              {/* Live Counters */}
+              <div className="flex items-center justify-center gap-3 text-xs font-mono-tech">
+                <span className="px-2.5 py-1 rounded-lg bg-[var(--bg-elevated)] text-emerald-400 border border-[var(--border-subtle)]">
+                  Importadas: {recordProgress.successCount}
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)]">
+                  Omitidas: {recordProgress.failedCount}
+                </span>
               </div>
-            ) : (
-              <div className="pt-1">
+
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="w-full h-2 rounded-full bg-[var(--border-strong)] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[var(--theme-accent)] transition-all duration-200"
+                    style={{
+                      width: `${recordProgress.total > 0 ? (recordProgress.current / recordProgress.total) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs font-mono-tech text-[var(--text-secondary)]">
+                  <span>
+                    Pista {recordProgress.current} de {recordProgress.total}
+                  </span>
+                  <span>
+                    {recordProgress.total > 0
+                      ? Math.round((recordProgress.current / recordProgress.total) * 100)
+                      : 0}
+                    %
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  isCancelledRef.current = true;
+                  setStep('preview');
+                }}
+                className="py-2 px-4 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-strong)] text-[var(--text-secondary)] text-xs font-semibold transition cursor-pointer"
+              >
+                Cancelar importación
+              </button>
+            </div>
+          )}
+
+          {/* ==============================================================
+              STEP 4: COMPLETE REPORT
+             ============================================================== */}
+          {step === 'complete' && (
+            <div className="space-y-4">
+              {resolvedTracks.length > 0 && failedTracks.length === 0 ? (
+                <div className="p-5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-strong)] text-center space-y-2.5">
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--text-primary)]">
+                      Importación completada al 100%
+                    </h3>
+                    <p className="text-sm font-semibold text-[var(--theme-accent)] mt-0.5">
+                      {tapeName}
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      Se verificaron e importaron {resolvedTracks.length} canciones con coincidencia exacta en tu biblioteca.
+                    </p>
+                  </div>
+                </div>
+              ) : resolvedTracks.length > 0 && failedTracks.length > 0 ? (
+                <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-strong)] space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-accent)] shrink-0">
+                      <AlertTriangle className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                        Importación completada con avisos
+                      </h3>
+                      <p className="text-xs font-semibold text-[var(--theme-accent)] truncate">
+                        {tapeName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-center">
+                      <p className="text-xs font-bold text-emerald-400 font-mono-tech">
+                        {resolvedTracks.length} importadas
+                      </p>
+                      <p className="text-[11px] text-[var(--text-muted)]">Coincidencia exacta</p>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-center">
+                      <p className="text-xs font-bold text-[var(--theme-accent)] font-mono-tech">
+                        {failedTracks.length} omitidas
+                      </p>
+                      <p className="text-[11px] text-[var(--text-muted)]">Sin resultado exacto</p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                    Para proteger la precisión de tu lista, Mixtape omitió las canciones que no coincidían de forma exacta en artista, título o duración.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-5 rounded-xl bg-[var(--bg-surface)] border border-red-500/30 text-center space-y-2.5">
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--text-primary)]">
+                      No se pudo importar la lista
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      Ninguna de las {failedTracks.length} canciones superó la verificación estricta de título y artista.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* UNRECORDED TRACKS REPORT */}
+              {failedTracks.length > 0 && (
+                <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 text-[var(--theme-accent)]" />
+                      <span>Pistas omitidas ({failedTracks.length})</span>
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyMissingTracks}
+                      className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-strong)] text-[var(--text-primary)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      {copiedMissing ? (
+                        <>
+                          <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">Copiado</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copiar omitidas</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+                    {failedTracks.map((item, idx) => (
+                      <div
+                        key={item.track.id || idx}
+                        className="p-2.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] flex items-center justify-between gap-2 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[var(--text-primary)] truncate leading-tight">
+                            {idx + 1}. {item.track.title}
+                          </p>
+                          <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                            {item.track.artist} {item.track.album ? `· ${item.track.album}` : ''}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-mono-tech font-semibold px-2 py-0.5 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border border-[var(--theme-badge-border)] shrink-0">
+                          {item.reason}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Next Action Buttons */}
+              {resolvedTracks.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={handlePlayNow}
+                    className="py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-xs transition active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Reproducir ahora ({resolvedTracks.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleOpenInLibrary}
+                    className="py-2.5 px-4 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] text-[var(--text-primary)] font-semibold text-xs border border-[var(--border-strong)] transition cursor-pointer"
+                  >
+                    Ver en Biblioteca
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
                   onClick={resetModal}
-                  className="w-full py-3 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs uppercase tracking-wider shadow-lg transition active:scale-95 cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-xs transition cursor-pointer"
                 >
-                  ← Volver a intentar con otra lista
+                  Volver a intentar con otra lista
                 </button>
-              </div>
-            )}
+              )}
 
-            {resolvedTracks.length > 0 && (
-              <div className="pt-1 text-center">
-                <button
-                  type="button"
-                  onClick={resetModal}
-                  className="text-xs font-mono text-zinc-400 hover:text-white underline cursor-pointer"
-                >
-                  Grabar otra cinta desde CSV
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              {resolvedTracks.length > 0 && (
+                <div className="pt-1 text-center">
+                  <button
+                    type="button"
+                    onClick={resetModal}
+                    className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline cursor-pointer"
+                  >
+                    Importar otra playlist desde CSV
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
