@@ -26,7 +26,7 @@ import { TrackRow, formatDuration } from './TrackRow';
 
 interface HomeViewProps {
   onSearchGenre: (query: string) => void;
-  onSelectPlaylist: (playlistId: string) => void;
+  onSelectPlaylist?: (playlistId: string) => void;
   onOpenFavorites: () => void;
   onOpenRpmModal: () => void;
   onOpenSpotifyCsvModal: () => void;
@@ -47,7 +47,6 @@ const QUICK_GENRES = [
 
 export const HomeView: React.FC<HomeViewProps> = ({
   onSearchGenre,
-  onSelectPlaylist,
   onOpenFavorites,
   onOpenRpmModal,
   onOpenSpotifyCsvModal,
@@ -57,6 +56,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const { playlists, likedTracks } = useLibrary();
   const { playTrack, playTape } = usePlayer();
 
+  const [newReleases, setNewReleases] = useState<Track[]>([]);
   const [discoveryWindows, setDiscoveryWindows] = useState<ContentWindow[]>([]);
   const [channels, setChannels] = useState<Track[]>([]);
   const [collections, setCollections] = useState<FeaturedCollection[]>([]);
@@ -103,11 +103,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
     setCollections(recommendationService.getPersonalizedCollections(musicLiked, musicPlaylists));
 
     Promise.allSettled([
+      recommendationService.getNewReleasesForYou(musicLiked, musicPlaylists, recentMusic),
       recommendationService.getDiscoveryForYouWindows(musicLiked, musicPlaylists, recentMusic),
       recommendationService.getPersonalizedChannels(musicLiked, musicPlaylists),
     ])
-      .then(([discRes, chanRes]) => {
+      .then(([newsRes, discRes, chanRes]) => {
         if (cancelled) return;
+        if (newsRes.status === 'fulfilled') {
+          setNewReleases(
+            newsRes.value
+              .filter((t) => isMusicTrack(t) && !/\bpodcast\b/i.test(`${t.title} ${t.artist}`))
+              .slice(0, 10)
+          );
+        }
         if (discRes.status === 'fulfilled') {
           setDiscoveryWindows(
             discRes.value
@@ -138,28 +146,25 @@ export const HomeView: React.FC<HomeViewProps> = ({
     };
   }, [likedTracks.length, playlists.length]);
 
-  const quickCards = playlists.slice(0, 5);
-
   return (
     <div className="space-y-8 pb-8">
-      {/* Greeting + Quick Access Grid */}
-      <section>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)] mb-4">
-          {greeting}
-        </h1>
+      {/* Greeting + Favorites Quick Card */}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text-primary)]">
+            {greeting}
+          </h1>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-          {/* Favorites Quick Card */}
           <div
             onClick={onOpenFavorites}
-            className="group flex items-center gap-3 p-2 pr-3 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+            className="group flex items-center gap-3 p-2 pr-3.5 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
           >
-            <div className="w-12 h-12 rounded-lg bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-accent)] shrink-0">
-              <Heart className="w-5 h-5 fill-current" />
+            <div className="w-9 h-9 rounded-lg bg-[var(--theme-badge-bg)] border border-[var(--theme-badge-border)] flex items-center justify-center text-[var(--theme-accent)] shrink-0">
+              <Heart className="w-4 h-4 fill-current" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[var(--text-primary)] truncate">Favoritos</p>
-              <p className="text-xs text-[var(--text-muted)]">{likedTracks.length} canciones</p>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-[var(--text-primary)] leading-tight">Favoritos</p>
+              <p className="text-[11px] text-[var(--text-muted)]">{likedTracks.length} canciones</p>
             </div>
             {likedTracks.length > 0 && (
               <button
@@ -168,50 +173,58 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   e.stopPropagation();
                   playTrack(likedTracks[0], likedTracks);
                 }}
-                className="w-9 h-9 rounded-full bg-[var(--theme-accent)] text-black flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-md transition cursor-pointer"
+                className="w-8 h-8 rounded-full bg-[var(--theme-accent)] text-white flex items-center justify-center transition cursor-pointer ml-1"
                 title="Reproducir favoritos"
               >
-                <Play className="w-4 h-4 fill-current ml-0.5" />
+                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
               </button>
             )}
           </div>
+        </div>
 
-          {quickCards.map((pl) => (
-            <div
-              key={pl.id}
-              onClick={() => onSelectPlaylist(pl.id)}
-              className="group flex items-center gap-3 p-2 pr-3 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
-            >
-              <div className="w-12 h-12 rounded-lg overflow-hidden bg-black/30 flex items-center justify-center shrink-0">
-                {pl.coverUrl || pl.tracks[0]?.thumbnail ? (
-                  <img
-                    src={pl.coverUrl || pl.tracks[0]?.thumbnail}
-                    alt={pl.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <ListMusic className="w-5 h-5 text-[var(--text-muted)]" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[var(--text-primary)] truncate">{pl.name}</p>
-                <p className="text-xs text-[var(--text-muted)]">{pl.tracks.length} pistas</p>
-              </div>
-              {pl.tracks.length > 0 && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    playTape(pl, 0);
-                  }}
-                  className="w-9 h-9 rounded-full bg-[var(--theme-accent)] text-black flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-md transition cursor-pointer"
-                  title="Reproducir lista"
-                >
-                  <Play className="w-4 h-4 fill-current ml-0.5" />
-                </button>
-              )}
+        {/* Novedades acordes a tus gustos */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-[var(--theme-accent)]" />
+            <h2 className="text-base font-bold text-[var(--text-primary)]">
+              Novedades acordes a tus gustos
+            </h2>
+          </div>
+
+          {loading && newReleases.length === 0 ? (
+            <div className="py-8 flex items-center justify-center gap-2 text-xs text-[var(--text-muted)] rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+              <Loader2 className="w-4 h-4 animate-spin text-[var(--theme-accent)]" />
+              Buscando novedades musicales para ti...
             </div>
-          ))}
+          ) : newReleases.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {newReleases.map((track) => (
+                <div
+                  key={track.id}
+                  onClick={() => playTrack(track, newReleases)}
+                  className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                >
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
+                    <img
+                      src={track.thumbnail}
+                      alt={track.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute right-2 bottom-2 w-9 h-9 rounded-full bg-[var(--theme-accent)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-lg transition-opacity">
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    </div>
+                  </div>
+                  <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                    {track.title}
+                  </p>
+                  <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                    {track.artist}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
 
