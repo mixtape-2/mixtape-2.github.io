@@ -98,8 +98,8 @@ const MASTER_ADMIN_HASH = '2fe7dd0cdaf8a1caea16103bdafb2f97c958568f44ebd34fd8940
 const MASTER_SALT = 'MIXTAPE_MASTER_SALT_84';
 const LICENSE_SIGN_SECRET = '80S_ANALOG_KEY_9941_TAPE_LOCK';
 
-// Interruptor temporal del sistema de claves (cambiar a true para volver a exigirlo al entrar)
-export const ACCESS_GATE_ENABLED = false;
+// Interruptor del sistema de claves (cambiar a false para desactivarlo temporalmente)
+export const ACCESS_GATE_ENABLED = true;
 
 // 1-Hour Free Trial in milliseconds
 export const TRIAL_DURATION_MS = 60 * 60 * 1000;
