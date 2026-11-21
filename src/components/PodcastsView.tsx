@@ -101,14 +101,14 @@ export const PodcastsView: React.FC<PodcastsViewProps> = ({ onAddTrackToPlaylist
               Tus Podcasts Seguidos ({followedPodcasts.length})
             </h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
             {followedPodcasts.map((show) => (
               <div
                 key={show.id}
                 onClick={() => setSelectedShow(show)}
-                className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
               >
-                <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2">
+                <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
                   <img
                     src={show.artwork}
                     alt={show.title}
@@ -116,10 +116,10 @@ export const PodcastsView: React.FC<PodcastsViewProps> = ({ onAddTrackToPlaylist
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                   {show.title}
                 </p>
-                <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                   {show.author}
                 </p>
               </div>
@@ -165,14 +165,14 @@ export const PodcastsView: React.FC<PodcastsViewProps> = ({ onAddTrackToPlaylist
             No se encontraron podcasts para esta búsqueda.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
             {results.map((show) => (
               <div
                 key={show.id}
                 onClick={() => setSelectedShow(show)}
-                className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
               >
-                <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
+                <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
                   <img
                     src={show.artwork}
                     alt={show.title}
@@ -180,14 +180,14 @@ export const PodcastsView: React.FC<PodcastsViewProps> = ({ onAddTrackToPlaylist
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                   {show.title}
                 </p>
-                <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                   {show.author}
                 </p>
                 {show.genre && (
-                  <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--bg-elevated)] text-[var(--text-muted)]">
+                  <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--bg-elevated)] text-[var(--text-muted)]">
                     {show.genre}
                   </span>
                 )}

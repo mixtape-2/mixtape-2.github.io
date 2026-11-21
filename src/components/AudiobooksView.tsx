@@ -127,16 +127,16 @@ export const AudiobooksView: React.FC = () => {
               Tus Audiolibros Guardados ({savedAudiobooks.length})
             </h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
             {savedAudiobooks.map((book) => {
               const prog = audiobookService.getBookLatestProgress(book.id);
               return (
                 <div
                   key={book.id}
                   onClick={() => setSelectedBook(book)}
-                  className="p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                  className="p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
                 >
-                  <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-2">
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
                     <img
                       src={book.artwork}
                       alt={book.title}
@@ -144,15 +144,15 @@ export const AudiobooksView: React.FC = () => {
                       className="w-full h-full object-cover"
                     />
                     {prog && (
-                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-mono-tech font-bold bg-black/80 text-[var(--theme-badge-text)]">
+                      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-full text-xs font-mono-tech font-bold bg-black/80 text-[var(--theme-badge-text)]">
                         {formatDuration(prog.currentTime)}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                  <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                     {book.title}
                   </p>
-                  <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                  <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                     {book.author}
                   </p>
                 </div>
@@ -200,14 +200,14 @@ export const AudiobooksView: React.FC = () => {
             No se encontraron audiolibros para esta búsqueda.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
             {results.map((book) => (
               <div
                 key={book.id}
                 onClick={() => setSelectedBook(book)}
-                className="p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                className="p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
               >
-                <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
+                <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
                   {book.artwork ? (
                     <img
                       src={book.artwork}
@@ -220,7 +220,7 @@ export const AudiobooksView: React.FC = () => {
                       <BookOpen className="w-8 h-8" />
                     </div>
                   )}
-                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-black/80 text-[var(--text-primary)]">
+                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-black/80 text-[var(--text-primary)]">
                     {book.provider === 'archive' ? 'Capítulos' : 'YouTube'}
                   </span>
                   {book.duration && book.duration > 0 ? (
@@ -230,10 +230,10 @@ export const AudiobooksView: React.FC = () => {
                     </span>
                   ) : null}
                 </div>
-                <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                   {book.title}
                 </p>
-                <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                   {book.author}
                 </p>
               </div>

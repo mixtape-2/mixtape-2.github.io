@@ -155,7 +155,7 @@ const AppContent: React.FC = () => {
         >
           {/* Sticky Top Bar (Desktop Quick Search + Mobile Brand & Utility Icons) */}
           {!isKidsMode && (
-            <header className="sticky top-0 z-20 px-4 sm:px-8 py-3 bg-[var(--bg-canvas)]/85 backdrop-blur-xl border-b border-[var(--border-subtle)] flex items-center justify-between gap-3 shrink-0">
+            <header className="sticky top-0 z-20 px-4 sm:px-6 lg:px-10 xl:px-12 py-3 bg-[var(--bg-canvas)]/85 backdrop-blur-xl border-b border-[var(--border-subtle)] flex items-center justify-between gap-3 shrink-0">
               {/* Mobile Brand */}
               <div className="flex md:hidden items-center gap-2 shrink-0">
                   <div
@@ -173,7 +173,7 @@ const AppContent: React.FC = () => {
               {/* Desktop Universal Quick Search */}
               <form
                 onSubmit={handleQuickSearchSubmit}
-                className="hidden md:flex items-center relative flex-1 max-w-md"
+                className="hidden md:flex items-center relative flex-1 max-w-xl"
               >
                 <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 pointer-events-none" />
                 <input
@@ -251,8 +251,8 @@ const AppContent: React.FC = () => {
             </header>
           )}
 
-          {/* Page Container */}
-          <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 pt-5 flex-1">
+          {/* Page Container (Full-width responsive canvas on PC) */}
+          <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-12 pt-6 flex-1">
             {/* QR Linked Banner */}
             {syncState.justLinkedFromUrl && (
               <div className="mb-5 px-4 py-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/35 flex items-center justify-between gap-3 text-xs text-emerald-300">

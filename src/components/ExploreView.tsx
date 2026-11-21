@@ -302,14 +302,14 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                   Álbumes y Lanzamientos
                 </h2>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {albums.slice(0, filter === 'albums' ? 20 : 5).map((rel) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
+                {albums.slice(0, filter === 'albums' ? 24 : 6).map((rel) => (
                   <div
                     key={rel.id}
                     onClick={() => setSelectedRelease(rel)}
-                    className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                    className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
                   >
-                    <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2">
+                    <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
                       <img
                         src={rel.thumbnail}
                         alt={rel.title}
@@ -317,10 +317,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                    <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                       {rel.title}
                     </p>
-                    <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                    <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                       {rel.artist} {rel.year ? `· ${rel.year}` : ''}
                     </p>
                   </div>
@@ -336,14 +336,14 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                 <Podcast className="w-4 h-4 text-[var(--theme-accent)]" />
                 <h2 className="text-base font-bold text-[var(--text-primary)]">Podcasts</h2>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {podcasts.slice(0, filter === 'podcasts' ? 20 : 5).map((show) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
+                {podcasts.slice(0, filter === 'podcasts' ? 24 : 6).map((show) => (
                   <div
                     key={show.id}
                     onClick={() => setSelectedPodcast(show)}
-                    className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                    className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
                   >
-                    <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2">
+                    <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
                       <img
                         src={show.artwork}
                         alt={show.title}
@@ -351,10 +351,10 @@ export const ExploreView: React.FC<ExploreViewProps> = ({
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                    <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                       {show.title}
                     </p>
-                    <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                    <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                       {show.author}
                     </p>
                   </div>

@@ -119,7 +119,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           setNewReleases(
             newsRes.value
               .filter((t) => isMusicTrack(t) && !/\bpodcast\b/i.test(`${t.title} ${t.artist}`))
-              .slice(0, 10)
+              .slice(0, 12)
           );
         }
         if (discRes.status === 'fulfilled') {
@@ -203,28 +203,28 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Buscando novedades musicales para ti...
             </div>
           ) : newReleases.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
               {newReleases.map((track) => (
                 <div
                   key={track.id}
                   onClick={() => playTrack(track, newReleases)}
-                  className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                  className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
                 >
-                  <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
                     <img
                       src={track.thumbnail}
                       alt={track.title}
                       loading="lazy"
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute right-2 bottom-2 w-9 h-9 rounded-full bg-[var(--theme-accent)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-lg transition-opacity">
-                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    <div className="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-full bg-[var(--theme-accent)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-lg transition-opacity">
+                      <Play className="w-4.5 h-4.5 fill-current ml-0.5" />
                     </div>
                   </div>
-                  <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                  <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                     {track.title}
                   </p>
-                  <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                  <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                     {track.artist}
                   </p>
                 </div>
@@ -438,28 +438,28 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <p className="text-xs text-[var(--text-muted)]">{win.subtitle}</p>
                   )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {win.tracks.slice(0, 5).map((track) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
+                  {win.tracks.slice(0, 6).map((track) => (
                     <div
                       key={track.id}
                       onClick={() => playTrack(track, win.tracks)}
-                      className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                      className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
                     >
-                      <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
+                      <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-3">
                         <img
                           src={track.thumbnail}
                           alt={track.title}
                           loading="lazy"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute right-2 bottom-2 w-9 h-9 rounded-full bg-[var(--theme-accent)] text-black flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 shadow-lg transition-all">
-                          <Play className="w-4 h-4 fill-current ml-0.5" />
+                        <div className="absolute right-2.5 bottom-2.5 w-10 h-10 rounded-full bg-[var(--theme-accent)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-lg transition-opacity">
+                          <Play className="w-4.5 h-4.5 fill-current ml-0.5" />
                         </div>
                       </div>
-                      <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                      <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                         {track.title}
                       </p>
-                      <p className="text-[11px] text-[var(--text-secondary)] truncate mt-0.5">
+                      <p className="text-xs text-[var(--text-secondary)] truncate mt-0.5">
                         {track.artist}
                       </p>
                     </div>

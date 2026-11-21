@@ -739,12 +739,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">
                 Álbumes guardados
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
                 {artistAlbums.map((alb) => (
                   <div
                     key={alb.id}
                     onClick={() => setSelectedPlaylistId(alb.id)}
-                    className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                    className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
                   >
                     <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
                       {alb.coverUrl || alb.tracks[0]?.thumbnail ? (
@@ -880,7 +880,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             Guarda álbumes desde Buscar para verlos aquí ordenados alfabéticamente.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
             {savedAlbums.map((alb) => (
               <div
                 key={alb.id}
@@ -890,7 +890,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     playTape(alb, 0);
                   }
                 }}
-                className="group p-2.5 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
               >
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
                   {alb.coverUrl || alb.tracks[0]?.thumbnail ? (
@@ -1204,7 +1204,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             Aquí aparecerán las carátulas de tus álbumes, playlists, podcasts y canciones recientes.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 lg:gap-5">
             {recentlyAdded.map((item) => (
               <div
                 key={item.key}
@@ -1222,9 +1222,9 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     playTrack(item.track, likedTracks, false, undefined, 'songs-mini');
                   }
                 }}
-                className="group p-2 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
+                className="group p-3 rounded-2xl bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] border border-[var(--border-subtle)] transition cursor-pointer"
               >
-                <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2">
+                <div className="aspect-square rounded-xl overflow-hidden bg-black/30 mb-2.5">
                   {item.artwork ? (
                     <img
                       src={item.artwork}
@@ -1244,10 +1244,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     </div>
                   )}
                 </div>
-                <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">
                   {item.title}
                 </p>
-                <p className="text-[11px] text-[var(--text-muted)] truncate mt-0.5">
+                <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">
                   {item.subtitle}
                 </p>
               </div>
