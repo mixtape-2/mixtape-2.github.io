@@ -150,7 +150,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4 text-[var(--text-muted)]" />
-            <span>Importar Spotify CSV</span>
+            <span>Importar URL / CSV</span>
           </button>
         </div>
       </div>

@@ -324,7 +324,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <FileSpreadsheet className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-[var(--text-primary)]">Importar Spotify CSV</p>
+            <p className="text-sm font-bold text-[var(--text-primary)]">Importar URL / CSV</p>
             <p className="text-xs text-[var(--text-muted)] truncate">
               Convierte tus playlists al instante
             </p>

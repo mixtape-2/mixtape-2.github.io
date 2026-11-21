@@ -460,6 +460,38 @@ function youtubeSearchPlugin(): Plugin {
           res.end(JSON.stringify({ error: err.message }));
         }
       });
+
+      // Local dev proxy to fetch public Spotify/Apple Music playlist pages without CORS
+      server.middlewares.use('/api/playlist-url', async (req, res) => {
+        const urlObj = new URL(req.url || '', 'http://localhost:3030');
+        const target = urlObj.searchParams.get('url') || '';
+        if (
+          !target ||
+          (!target.startsWith('https://open.spotify.com/') &&
+            !target.startsWith('https://music.apple.com/'))
+        ) {
+          res.statusCode = 400;
+          res.end('Invalid target URL');
+          return;
+        }
+        try {
+          const upstream = await fetch(target, {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            },
+            signal: AbortSignal.timeout(10000),
+          });
+          const body = await upstream.text();
+          res.statusCode = upstream.status;
+          res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          res.end(body);
+        } catch (err: any) {
+          res.statusCode = 502;
+          res.end(err?.message || 'Upstream fetch failed');
+        }
+      });
     },
     configurePreviewServer(server) {
       // Re-use API endpoints in preview mode

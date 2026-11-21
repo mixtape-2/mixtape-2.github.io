@@ -4,6 +4,8 @@ import {
   Upload,
   FileSpreadsheet,
   FileText,
+  Link2,
+  Loader2,
   Play,
   CheckCircle2,
   AlertCircle,
@@ -21,6 +23,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { parseSpotifyCsv, type ParsedSpotifyTrack } from '../services/spotifyCsvParser';
+import { importPlaylistFromUrl, detectPlaylistUrl } from '../services/playlistUrlImporter';
 import {
   findStrictBestMatch,
   cleanTitle,
@@ -57,7 +60,9 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
   const { playTrack, setFullScreenPlayerOpen } = usePlayer();
 
   const [step, setStep] = useState<ModalStep>('input');
-  const [inputTab, setInputTab] = useState<'upload' | 'paste'>('upload');
+  const [inputTab, setInputTab] = useState<'url' | 'upload' | 'paste'>('url');
+  const [playlistUrl, setPlaylistUrl] = useState('');
+  const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [rawText, setRawText] = useState('');
   const [tapeName, setTapeName] = useState('Mixtape Spotify');
   const [tapeType, setTapeType] = useState<'type1' | 'type2' | 'type4'>('type2');
@@ -124,11 +129,33 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
 
   const handlePasteSubmit = () => {
     if (!rawText.trim()) {
-      setErrorMsg('Pega el texto de tu CSV o lista de Spotify.');
+      setErrorMsg('Pega el texto de tu CSV o lista de canciones.');
       return;
     }
     const res = parseSpotifyCsv(rawText);
     handleProcessParsed(res.tracks, res.suggestedName);
+  };
+
+  const handleUrlSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmed = playlistUrl.trim();
+    if (!trimmed) {
+      setErrorMsg('Pega la URL pública de una lista de Spotify o Apple Music.');
+      return;
+    }
+    setErrorMsg(null);
+    setIsFetchingUrl(true);
+    try {
+      const res = await importPlaylistFromUrl(trimmed);
+      handleProcessParsed(res.tracks, res.suggestedName || res.playlistTitle);
+    } catch (err: any) {
+      setErrorMsg(
+        err?.message ||
+          'No se pudo leer la lista desde esa URL. Comprueba que la playlist sea pública.'
+      );
+    } finally {
+      setIsFetchingUrl(false);
+    }
   };
 
   const handleLoadDemo = () => {
@@ -300,6 +327,8 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
 
   const resetModal = () => {
     setStep('input');
+    setPlaylistUrl('');
+    setIsFetchingUrl(false);
     setRawText('');
     setParsedTracks([]);
     setSelectedIds(new Set());
@@ -328,14 +357,14 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-[var(--text-primary)] truncate">
-                  Importar Playlist CSV
+                  Importar Playlist (URL o CSV)
                 </h2>
                 <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono-tech font-semibold text-[var(--theme-accent)] bg-[var(--theme-badge-bg)] px-2 py-0.5 rounded-md border border-[var(--theme-badge-border)] shrink-0">
                   <ShieldCheck className="w-3 h-3" /> Coincidencia exacta
                 </span>
               </div>
               <p className="text-xs text-[var(--text-secondary)] truncate">
-                Spotify, Apple Music, Exportify, TuneMyMusic o Soundiiz
+                Enlace directo de Spotify / Apple Music o archivo CSV/TXT
               </p>
             </div>
           </div>
@@ -366,40 +395,113 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
           {step === 'input' && (
             <div className="space-y-4">
               <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-                Carga tu archivo exportado (<strong className="text-[var(--text-primary)]">.csv</strong> o{' '}
-                <strong className="text-[var(--text-primary)]">.txt</strong>) o pega directamente el listado. Mixtape buscará cada pista con{' '}
-                <strong className="text-[var(--text-primary)]">coincidencia estricta</strong> de título, artista y duración, omitiendo resultados ambiguos.
+                Pega el enlace público de una playlist de{' '}
+                <strong className="text-[var(--text-primary)]">Spotify</strong> o{' '}
+                <strong className="text-[var(--text-primary)]">Apple Music</strong>, o sube un archivo{' '}
+                <strong className="text-[var(--text-primary)]">.csv / .txt</strong>. Mixtape buscará cada canción con coincidencia estricta.
               </p>
 
               {/* Input Mode Selector */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setInputTab('upload')}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-2 cursor-pointer ${
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setInputTab('url');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    inputTab === 'url'
+                      ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
+                      : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
+                  }`}
+                >
+                  <Link2 className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Por URL</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setInputTab('upload');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     inputTab === 'upload'
                       ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
                       : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
                   }`}
                 >
-                  <Upload className="w-4 h-4" />
-                  <span>Subir archivo .CSV</span>
+                  <Upload className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Archivo CSV</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setInputTab('paste')}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-2 cursor-pointer ${
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setInputTab('paste');
+                  }}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
                     inputTab === 'paste'
                       ? 'bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border-[var(--theme-badge-border)]'
                       : 'bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-surface-hover)]'
                   }`}
                 >
-                  <FileText className="w-4 h-4" />
-                  <span>Pegar texto CSV</span>
+                  <FileText className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Pegar texto</span>
                 </button>
               </div>
 
-              {inputTab === 'upload' ? (
+              {inputTab === 'url' ? (
+                <form onSubmit={handleUrlSubmit} className="space-y-3">
+                  <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-xs font-semibold text-[var(--text-primary)]">
+                        URL pública de Spotify o Apple Music
+                      </label>
+                      {playlistUrl.trim() && detectPlaylistUrl(playlistUrl) && (
+                        <span className="text-[10px] font-mono-tech font-bold px-2 py-0.5 rounded-md bg-[var(--theme-badge-bg)] text-[var(--theme-accent)] border border-[var(--theme-badge-border)]">
+                          {detectPlaylistUrl(playlistUrl)?.platform === 'spotify'
+                            ? 'Spotify detectado'
+                            : 'Apple Music detectado'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="relative">
+                      <Link2 className="w-4 h-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="url"
+                        value={playlistUrl}
+                        onChange={(e) => setPlaylistUrl(e.target.value)}
+                        placeholder="https://open.spotify.com/playlist/... o https://music.apple.com/..."
+                        disabled={isFetchingUrl}
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-strong)] text-xs sm:text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--theme-accent)] disabled:opacity-60"
+                      />
+                    </div>
+
+                    <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                      Funciona con listas y álbumes públicos (en Spotify hasta 100 canciones por URL). Si tu lista es privada, cámbiala a pública antes de importarla.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isFetchingUrl || !playlistUrl.trim()}
+                    className="w-full py-2.5 px-4 rounded-xl bg-[var(--theme-accent)] hover:brightness-110 text-white font-bold text-xs flex items-center justify-center gap-2 transition active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+                  >
+                    {isFetchingUrl ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Extrayendo canciones de la URL...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="w-4 h-4" />
+                        <span>Extraer canciones de la lista</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : inputTab === 'upload' ? (
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className="border border-dashed border-[var(--border-strong)] hover:border-[var(--theme-accent)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] rounded-xl p-7 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 group"
